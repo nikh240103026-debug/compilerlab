@@ -1,0 +1,216 @@
+[
+  {
+    "id": "foundations",
+    "number": 0,
+    "title": "Foundations",
+    "summary": "What a compiler is, how it differs from an interpreter, and how the phases fit together.",
+    "pipelineStage": false,
+    "optional": false,
+    "lessonsMilestone": 2,
+    "topics": [
+      "Compiler vs interpreter vs assembler vs linker and loader",
+      "Compiler structure and the phases pipeline",
+      "Bootstrapping and cross-compilers",
+      "The language processing system",
+      "Compiler-construction tools"
+    ],
+    "visualizers": ["Source-to-executable pipeline fly-through, with a 2D fallback"]
+  },
+  {
+    "id": "lexical-analysis",
+    "number": 1,
+    "title": "Lexical analysis",
+    "summary": "Turn a stream of characters into tokens using regular expressions and finite automata.",
+    "pipelineStage": true,
+    "optional": false,
+    "lessonsMilestone": 2,
+    "topics": [
+      "The role of the lexer",
+      "Tokens, lexemes and patterns",
+      "Input buffering",
+      "Regular expressions",
+      "Finite automata: NFA, DFA and epsilon-NFA",
+      "Regex to NFA to DFA to minimal DFA",
+      "Lexer design",
+      "Lexical error handling",
+      "Lex and Flex: structure, regex syntax, yytext, yylex, yylval, start conditions"
+    ],
+    "visualizers": [
+      "Automata builder with drag-and-drop states",
+      "Regex-to-NFA animation",
+      "Subset-construction table",
+      "DFA minimization partition view",
+      "Token-stream player on real code"
+    ]
+  },
+  {
+    "id": "syntax-analysis",
+    "number": 2,
+    "title": "Syntax analysis",
+    "summary": "Recover program structure from tokens with context-free grammars and parsers.",
+    "pipelineStage": true,
+    "optional": false,
+    "lessonsMilestone": 5,
+    "topics": [
+      "Context-free grammars, derivations and parse trees",
+      "Ambiguity",
+      "Grammar transformations",
+      "Top-down parsing: recursive descent, backtracking, LL(1), FIRST and FOLLOW",
+      "Bottom-up parsing: handles, shift-reduce, operator precedence",
+      "The LR family: LR(0), SLR, CLR and LALR",
+      "Error recovery: panic mode and phrase level",
+      "Yacc and Bison: structure, precedence, %union, conflicts, mid-rule actions, yyerror"
+    ],
+    "visualizers": [
+      "Grammar workbench",
+      "FIRST and FOLLOW fill-in",
+      "LL(1) table with conflict highlighting",
+      "LR automaton graph with item sets",
+      "Parser stack animator with input tape",
+      "Parse tree and derivation side by side",
+      "Ambiguity explorer"
+    ]
+  },
+  {
+    "id": "semantic-analysis",
+    "number": 3,
+    "title": "Semantic analysis",
+    "summary": "Check meaning beyond syntax: attributes, types, scopes and symbol tables.",
+    "pipelineStage": true,
+    "optional": false,
+    "lessonsMilestone": 7,
+    "topics": [
+      "Syntax-directed definitions and translation",
+      "Attributes and dependency graphs",
+      "L-attributed and S-attributed definitions",
+      "Type systems",
+      "Type checking and inference basics",
+      "Scope and binding",
+      "Symbol table organization: hash, tree and scoped stacks",
+      "Processing declarations"
+    ],
+    "visualizers": [
+      "Annotated parse tree evaluator",
+      "Dependency graph",
+      "Scope stack animation",
+      "Type-checker stepper"
+    ]
+  },
+  {
+    "id": "intermediate-code",
+    "number": 4,
+    "title": "Intermediate code generation",
+    "summary": "Translate checked programs into a machine-independent form that is easy to optimize.",
+    "pipelineStage": true,
+    "optional": false,
+    "lessonsMilestone": 7,
+    "topics": [
+      "Syntax trees, DAGs and postfix",
+      "Three-address code",
+      "Quadruples, triples and indirect triples",
+      "Static single assignment",
+      "Control-flow translation: boolean expressions and backpatching",
+      "Arrays",
+      "Procedures",
+      "Switch statements"
+    ],
+    "visualizers": [
+      "AST to three-address code animator",
+      "Backpatching stepper",
+      "DAG builder",
+      "SSA phi explorer"
+    ]
+  },
+  {
+    "id": "code-optimization",
+    "number": 5,
+    "title": "Code optimization",
+    "summary": "Improve intermediate code using flow graphs, data-flow analysis and loop transformations.",
+    "pipelineStage": true,
+    "optional": false,
+    "lessonsMilestone": 8,
+    "topics": [
+      "Basic blocks and flow graphs",
+      "Local optimizations",
+      "Global data-flow analysis",
+      "Loop optimization",
+      "Peephole optimization",
+      "Machine-independent vs machine-dependent optimization"
+    ],
+    "visualizers": [
+      "Before and after diff with highlighted transformations",
+      "Data-flow solver with IN and OUT sets per iteration",
+      "Flow graph with loop detection: dominators and natural loops",
+      "Optimization pipeline toggles"
+    ]
+  },
+  {
+    "id": "code-generation",
+    "number": 6,
+    "title": "Code generation",
+    "summary": "Map intermediate code onto a target machine: instructions, registers and ordering.",
+    "pipelineStage": true,
+    "optional": false,
+    "lessonsMilestone": 8,
+    "topics": [
+      "Target machine models",
+      "Instruction selection",
+      "Register allocation and assignment",
+      "Graph coloring",
+      "Next-use information",
+      "The getReg algorithm",
+      "Basic block code generation",
+      "DAG-based generation",
+      "Optimal ordering"
+    ],
+    "visualizers": [
+      "Register allocator stepper",
+      "Interference graph coloring",
+      "Code generation table",
+      "VM execution"
+    ]
+  },
+  {
+    "id": "runtime-environments",
+    "number": 7,
+    "title": "Runtime and supporting phases",
+    "summary": "What surrounds the pipeline: storage, activation records, symbol tables and error handling.",
+    "pipelineStage": false,
+    "optional": false,
+    "lessonsMilestone": 9,
+    "topics": [
+      "Storage organization",
+      "Activation records",
+      "Stack and heap",
+      "Parameter passing",
+      "Access links",
+      "Garbage collection overview",
+      "Symbol table management",
+      "Error handling across all phases: lexical, syntactic, semantic, logical",
+      "Linking and loading"
+    ],
+    "visualizers": [
+      "Call-stack and activation record animation",
+      "Heap and garbage collection demo",
+      "Parameter-passing comparison: value, reference, name, copy-restore"
+    ]
+  },
+  {
+    "id": "advanced-tracks",
+    "number": 8,
+    "title": "Advanced tracks",
+    "summary": "Optional paths into modern practice: LLVM, JITs, bytecode VMs and static analysis.",
+    "pipelineStage": false,
+    "optional": true,
+    "lessonsMilestone": 9,
+    "topics": [
+      "LLVM IR overview",
+      "Just-in-time compilation",
+      "Interpreters and bytecode VMs",
+      "Parser generators: ANTLR and PEG",
+      "Incremental parsing",
+      "Static analysis basics"
+    ],
+    "visualizers": []
+  }
+]
