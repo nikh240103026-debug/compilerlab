@@ -36,6 +36,16 @@ export function parseEnv(text) {
 }
 
 /**
+ * True once `npm install` has finished. A failed install can leave a partial node_modules.
+ * @param {string} [root]
+ */
+export function dependenciesInstalled(root = ROOT) {
+  return ['tsx/dist/cli.mjs', 'vite/bin/vite.js'].every((file) =>
+    existsSync(join(root, 'node_modules', file)),
+  );
+}
+
+/**
  * Creates .env from .env.example. Never overwrites an existing .env.
  * @param {string} [root]
  * @returns {{ created: boolean, path: string }}

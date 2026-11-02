@@ -42,13 +42,13 @@ Run `npm run doctor` first. It gives exact fixes for your operating system.
 
 ### Any operating system
 
-| Problem                              | Fix                                                                                                                     |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| "Port 4317 is in use"                | CompilerLab may already be running. Close it, or set `PORT` or `WEB_PORT` in `.env`.                                    |
-| "The local server is not responding" | The terminal running `npm start` was closed or stopped. Start it again.                                                 |
-| A database error at startup          | Run `npm run reset`. It keeps your backups in `data/backups`.                                                           |
-| "better-sqlite3 could not load"      | The app has switched to Node's built-in `node:sqlite` and still works. To restore it, run `npm rebuild better-sqlite3`. |
-| The wrong Node version               | Node 22 is the supported version. Newer versions get a warning; older ones cannot run.                                  |
+| Problem                              | Fix                                                                                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| "Port 4317 is in use"                | CompilerLab may already be running. Close it, or set `PORT` or `WEB_PORT` in `.env`.                                                 |
+| "The local server is not responding" | The terminal running `npm start` was closed or stopped. Start it again.                                                              |
+| A database error at startup          | Run `npm run reset`. It keeps your backups in `data/backups`.                                                                        |
+| "better-sqlite3 could not load"      | The app has switched to Node's built-in `node:sqlite` and still works. To restore it, delete `node_modules` and run `npm run setup`. |
+| The wrong Node version               | Node 22 is the supported version. Newer versions get a warning; older ones cannot run.                                               |
 
 ### Windows
 

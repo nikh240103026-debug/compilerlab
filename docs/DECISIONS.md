@@ -57,7 +57,11 @@ Components follow shadcn/ui's conventions (`cva`, `cn`, local source, `component
 
 ### SQLite driver and fallback
 
-`better-sqlite3` 13 ships prebuilt binaries for Windows, macOS and Linux inside its package, so installing it needs no compiler. The documented fallback that Part 1 asks for is Node's built-in `node:sqlite`. It is selected automatically and tested against the same contract.
+`better-sqlite3` 13 ships prebuilt binaries for Windows, macOS and Linux inside its package. The documented fallback that Part 1 asks for is Node's built-in `node:sqlite`. It is selected automatically and tested against the same contract.
+
+### Install scripts are off
+
+`.npmrc` sets `ignore-scripts=true`. Without it, a fresh clone fails to install on any machine lacking a full C++ toolchain: npm's lockfile does not record `better-sqlite3`'s `gypfile: false`, so a lockfile install sees its `binding.gyp` and runs `node-gyp`. A first install with no lockfile does not show this, so only a real fresh clone reveals it (see [TESTING.md](TESTING.md)). No dependency needs an install script, and this also stops dependencies running code at install time. Because the root `prepare` script no longer runs on install either, `npm run setup` activates the git hooks itself.
 
 ### Default Gemini model
 

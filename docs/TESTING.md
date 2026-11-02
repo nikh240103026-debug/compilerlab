@@ -55,3 +55,13 @@ $env:PW_CHANNEL = 'msedge'; npm run test:e2e
 ```
 
 They are separate from `npm run check` so the check works without a browser installed.
+
+## Fresh clone
+
+A working copy can hide install problems, so test the two-command promise from a clean clone before releasing, and whenever dependencies or `.npmrc` change:
+
+```bash
+git clone . ../compilerlab-fresh
+```
+
+Then, in that folder, run `npm run setup` and `npm start`. Use Node 22 with the npm it ships with, on a machine without a C++ toolchain if you can.

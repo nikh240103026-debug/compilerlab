@@ -1,19 +1,18 @@
 // @ts-check
 // Exits non-zero only when the app cannot run. Missing lab tools and a missing Gemini key
 // are warnings, because the app has fallbacks for both.
-import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { checkGemini, checkNode, checkTools, toolFix } from './checks.mjs';
-import { ensureEnvFile, readEnv, ROOT } from './env.mjs';
+import { dependenciesInstalled, ensureEnvFile, readEnv, ROOT } from './env.mjs';
 import { bold, dim, printCheck, printFix } from './report.mjs';
 
 /** @returns {{ state: 'ok' | 'warn' | 'fail', detail: string, fix: string[] }} */
 function checkDatabase() {
-  if (!existsSync(join(ROOT, 'node_modules'))) {
+  if (!dependenciesInstalled()) {
     return {
       state: 'fail',
-      detail: 'Dependencies are not installed.',
+      detail: 'Dependencies are not fully installed.',
       fix: ['Run: npm run setup'],
     };
   }
@@ -26,13 +25,13 @@ function checkDatabase() {
       return {
         state: 'warn',
         detail: "better-sqlite3 could not load, so the app will use Node's built-in node:sqlite.",
-        fix: ['To restore it, run: npm rebuild better-sqlite3'],
+        fix: ['To restore it, delete node_modules and run: npm run setup'],
       };
     }
     return {
       state: 'fail',
       detail: 'No SQLite driver could load.',
-      fix: ['Switch to Node 22 LTS, then run: npm rebuild better-sqlite3'],
+      fix: ['Switch to Node 22 LTS, delete node_modules and run: npm run setup'],
     };
   }
 }

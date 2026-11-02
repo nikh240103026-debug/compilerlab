@@ -59,7 +59,7 @@ The database is `data/compilerlab.db`, in WAL mode. `db/migrate.ts` applies pend
 
 `db/driver.ts` is a small interface over two interchangeable SQLite drivers:
 
-1. **better-sqlite3** ships prebuilt binaries inside its package, so nothing compiles during install.
+1. **better-sqlite3** ships prebuilt binaries inside its package, and `.npmrc` turns install scripts off, so nothing compiles during install.
 2. **`node:sqlite`**, built into Node, is the automatic fallback if that binary cannot load. Set `SQLITE_DRIVER` in `.env` to force either one.
 
 Settings are stored one key per row and validated field by field on read. A corrupt value falls back to its default and does not affect the others.

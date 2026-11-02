@@ -10,20 +10,28 @@ import { ensureEnvFile, ROOT } from './lib/env.mjs';
 import { bold, printCheck, printFix } from './lib/report.mjs';
 
 /**
- * Runs npm without a shell. `npm run` provides npm_execpath; the shell fallback only
- * covers running this file directly, and its arguments are fixed strings.
- * @param {string[]} args
+ * @param {import('node:child_process').ChildProcess} child
  * @returns {Promise<number>}
  */
-function runNpm(args) {
-  const npmCli = process.env.npm_execpath;
-  const child = npmCli
-    ? spawn(process.execPath, [npmCli, ...args], { cwd: ROOT, stdio: 'inherit' })
-    : spawn(`npm ${args.join(' ')}`, { cwd: ROOT, stdio: 'inherit', shell: true });
+function exitCodeOf(child) {
   return new Promise((resolve) => {
     child.on('error', () => resolve(1));
     child.on('close', (code) => resolve(code ?? 1));
   });
+}
+
+/**
+ * Runs npm without a shell. `npm run` provides npm_execpath; the shell fallback only
+ * covers running this file directly, and its arguments are fixed strings.
+ * @param {string[]} args
+ */
+function runNpm(args) {
+  const npmCli = process.env.npm_execpath;
+  return exitCodeOf(
+    npmCli
+      ? spawn(process.execPath, [npmCli, ...args], { cwd: ROOT, stdio: 'inherit' })
+      : spawn(`npm ${args.join(' ')}`, { cwd: ROOT, stdio: 'inherit', shell: true }),
+  );
 }
 
 console.log(bold('Setting up CompilerLab'));
@@ -43,10 +51,18 @@ if (!process.argv.includes('--skip-install')) {
   console.log('\nInstalling dependencies...');
   const code = await runNpm(['install', '--no-audit', '--no-fund']);
   if (code !== 0) {
-    console.error('\nnpm install failed. Check your network connection and run this again.');
-    console.error('If it keeps failing, delete node_modules and retry: npm run setup');
+    console.error('\nnpm install failed. The lines above say why.');
+    console.error('Fix that if you can, then delete node_modules and run: npm run setup');
     process.exit(code);
   }
+  // .npmrc turns install scripts off, so the git hooks are activated here. Failing is harmless:
+  // a copy of the project without git simply has no hooks.
+  await exitCodeOf(
+    spawn(process.execPath, [join(ROOT, 'node_modules', 'husky', 'bin.js')], {
+      cwd: ROOT,
+      stdio: 'ignore',
+    }),
+  );
 }
 
 console.log();

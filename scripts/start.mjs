@@ -2,9 +2,8 @@
 // @ts-check
 // `npm start`: launches the API server and the Vite dev server together and opens the browser.
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { ensureEnvFile, readEnv, ROOT } from './lib/env.mjs';
+import { dependenciesInstalled, ensureEnvFile, readEnv, ROOT } from './lib/env.mjs';
 import {
   isPortFree,
   killTree,
@@ -16,8 +15,8 @@ import { bold, dim } from './lib/report.mjs';
 
 const startedAt = performance.now();
 
-if (!existsSync(join(ROOT, 'node_modules'))) {
-  console.error('Dependencies are not installed. Run: npm run setup');
+if (!dependenciesInstalled()) {
+  console.error('Dependencies are not fully installed. Run: npm run setup');
   process.exit(1);
 }
 
