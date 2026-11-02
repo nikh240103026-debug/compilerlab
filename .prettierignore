@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+data
+playwright-report
+test-results
+package-lock.json
+# Kept as converted from the original build prompt.
+CLAUDE.md
+docs/SPEC.md

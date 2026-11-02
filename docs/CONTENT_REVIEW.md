@@ -1,0 +1,8 @@
+# Content review
+
+Points a human should check against the textbook.
+
+| Where                                | Question                                                                                                                                                                                                                                                                                                                                                     | Added       |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| Dashboard pipeline, `modules.json`   | The spec says "seven compiler phases", but its modules give six sequential phases plus Module 7's supporting phases. The Dragon Book's own figure lists seven by splitting optimization into machine-independent and machine-dependent. The pipeline currently draws six states. Decide whether to draw seven, and make the lesson wording match the choice. | Milestone 1 |
+| Dashboard pipeline transition labels | The labels (characters, tokens, parse tree, typed tree, IR, better IR, code) are informal shorthand. Check that they do not conflict with the terms the lessons will use.                                                                                                                                                                                    | Milestone 1 |

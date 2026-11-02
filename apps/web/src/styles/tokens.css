@@ -1,0 +1,110 @@
+/*
+ * CompilerLab design tokens. Components use these through Tailwind utilities, never raw colors.
+ * tokens.test.ts checks every text and control pairing against WCAG AA in both themes.
+ */
+:root {
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.625rem;
+
+  /* Settings > Animation speed sets this. Higher is faster. */
+  --motion-speed: 1;
+  --duration-fast: calc(120ms / var(--motion-speed));
+  --duration-base: calc(200ms / var(--motion-speed));
+  --duration-slow: calc(360ms / var(--motion-speed));
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --sidebar-width: 15.5rem;
+  --sidebar-rail-width: 3.5rem;
+}
+
+:root,
+[data-theme='light'] {
+  --canvas: #f6f4ef;
+  --surface: #fffefb;
+  --surface-2: #f0ede6;
+  --surface-3: #e6e2d9;
+  --line: #dcd8ce;
+  --line-strong: #837e72;
+  --ink: #1a1c20;
+  --ink-muted: #565a61;
+
+  --accent: #8f4d00;
+  --accent-hover: #753f00;
+  --on-accent: #fffaf2;
+  --accent-soft: #f6e8d3;
+  --focus: #8f4d00;
+
+  --success: #0f6541;
+  --warning: #964207;
+  --danger: #a81f2c;
+  --info: #0d5a95;
+
+  /* One color per course module, used across navigation, lessons and analytics. */
+  --module-0: #505a67;
+  --module-1: #0a5f97;
+  --module-2: #5340bd;
+  --module-3: #a32d72;
+  --module-4: #08665b;
+  --module-5: #2e6816;
+  --module-6: #96440a;
+  --module-7: #ad2933;
+  --module-8: #665609;
+
+  /* Token types in lexers, parsers and code views. */
+  --token-keyword: #5340bd;
+  --token-identifier: #1a1c20;
+  --token-literal: #08665b;
+  --token-operator: #96440a;
+  --token-punctuation: #565a61;
+  --token-comment: #585c64;
+
+  --diff-add: #d9f0e2;
+  --diff-add-ink: #0d5c3c;
+  --diff-remove: #f8dfe0;
+  --diff-remove-ink: #8f1a26;
+}
+
+[data-theme='dark'] {
+  --canvas: #0d1015;
+  --surface: #14181f;
+  --surface-2: #1b2029;
+  --surface-3: #252b36;
+  --line: #2a313d;
+  --line-strong: #6b7686;
+  --ink: #e8eaed;
+  --ink-muted: #a6aeba;
+
+  --accent: #f2b544;
+  --accent-hover: #f7c66a;
+  --on-accent: #1c1404;
+  --accent-soft: #33291a;
+  --focus: #f2b544;
+
+  --success: #4fc98e;
+  --warning: #f4935a;
+  --danger: #f4727c;
+  --info: #62b6f2;
+
+  --module-0: #9aa7b8;
+  --module-1: #5cb3f0;
+  --module-2: #a99bf5;
+  --module-3: #ee8cc4;
+  --module-4: #3fc7b5;
+  --module-5: #7ccb5a;
+  --module-6: #f29a5b;
+  --module-7: #f0797f;
+  --module-8: #d9c156;
+
+  --token-keyword: #a99bf5;
+  --token-identifier: #e8eaed;
+  --token-literal: #3fc7b5;
+  --token-operator: #f29a5b;
+  --token-punctuation: #a6aeba;
+  --token-comment: #8e97a4;
+
+  --diff-add: #15352a;
+  --diff-add-ink: #7fe0b1;
+  --diff-remove: #3d1d22;
+  --diff-remove-ink: #f7a3a9;
+}

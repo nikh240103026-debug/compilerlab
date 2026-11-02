@@ -1,0 +1,20 @@
+{
+  "name": "@compilerlab/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@compilerlab/content": "*",
+    "@compilerlab/shared": "*",
+    "@fastify/static": "^10.1.8",
+    "better-sqlite3": "^13.0.3",
+    "fastify": "^5.12.8",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0"
+  }
+}
