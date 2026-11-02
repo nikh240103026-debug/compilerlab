@@ -1,3 +1,16 @@
 // Pure compiler-theory engine: no DOM and no Node APIs, so it runs in browser workers and on
-// the server. The algorithms start in Milestone 2 (see docs/SPEC.md, Part 14).
-export const ENGINE_VERSION = '0.1.0';
+// the server. Every algorithm returns a Trace that a visualizer can play.
+export * from './core/result';
+export * from './core/trace';
+export * from './regex/charset';
+export * from './regex/parser';
+export * from './automata/types';
+export * from './automata/thompson';
+export * from './automata/subset';
+export * from './automata/minimize';
+export * from './automata/simulate';
+export * from './automata/equivalence';
+export * from './automata/direct';
+export * from './lexer/mini-lex';
+export * from './lexer/spec';
+export * from './lexer/input-buffer';

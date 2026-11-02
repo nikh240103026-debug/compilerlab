@@ -30,8 +30,9 @@ Part 3 says "single process start". I read this as one command. It starts the Vi
 
 Part 2 lists the whole stack, and Part 15 asks for a justification for each dependency. These are installed when first used, not in Milestone 1:
 
-- Milestone 2: Framer Motion, React Flow, D3, KaTeX, MDX
+- Milestone 2: Framer Motion, React Flow, KaTeX, MDX
 - Milestone 3: Monaco, xterm.js, `@fastify/websocket`
+- Milestone 5: D3, for parse tree layout. Automata use a small layered layout written for them, and the syntax tree in Milestone 2 does not need D3 either.
 - Milestone 4: `@google/genai`, MiniSearch
 - Milestone 6: Recharts
 - Milestone 9: React Three Fiber, drei
@@ -94,3 +95,70 @@ Part 13 defines the check as lint, typecheck, tests and build. Playwright needs 
 ### What the 3-second cold start covers
 
 Measured from fresh clones on Windows 11, `npm start` reports ready in 1.0 to 1.4 seconds on both Node 22 and Node 24, and the production server answers in about 1 second. The very first start after installing took 7 to 13 seconds. The likely cause is the operating system and antivirus reading the new files for the first time, though that is not confirmed. I treat the target as applying to normal starts and have not added a warm-up step to `setup`.
+
+## Milestone 2
+
+### Most graphs are plain SVG, and React Flow is only in the builder
+
+Part 2 lists React Flow for graphs. It is used where it earns its place: the automata builder, for dragging, connecting and zooming. The animated visualizers draw their own SVG, because Part 6 requires exporting any step as SVG, PNG or GIF. The same React component draws the screen and the export, and React Flow renders nodes as HTML, which cannot be exported that way. Both share one edge-routing function, so they look alike.
+
+### Framer Motion does only entry and caption animation
+
+States and edges fade in, and the step caption crossfades. Moving states use a CSS transition. All of it honors `prefers-reduced-motion` and the Animation speed setting. Exported frames are drawn with no animation.
+
+### Regular expression syntax
+
+The engine accepts union, concatenation, `*`, `+`, `?`, groups, classes and escapes, as Part 4 requires, plus three additions:
+
+- `ε` means the empty string, so textbook expressions like `a|ε` can be typed directly. `\ε` is the literal character.
+- `"quoted text"` is literal, as in Lex, because Module 1 teaches Lex.
+- Class escapes `\d \w \s` and their negations work in and out of classes.
+
+Repeat counts like `a{2,3}` are rejected with a hint, since Part 4 does not list them and in Lex braces also mean named definitions. Unknown escapes mean the character itself, as in Lex. `.` matches anything except a newline. Empty alternatives such as `a|` are errors with a hint to write `ε`, because they are usually typos.
+
+### Thompson's construction keeps the book's numbering
+
+State numbers are assigned before anything is drawn, using the order that reproduces the Dragon Book's numbering of `(a|b)*abb`, 0 to 10. To show a concatenation actually happening, the right-hand fragment's start state appears as a waiting copy, such as `7′`, which then merges into state 7.
+
+### Minimization uses Hopcroft's algorithm
+
+Part 4 asks for Hopcroft's algorithm. The Dragon Book's Algorithm 3.39 is the simpler partition refinement. They produce the same minimal DFA, and the lessons explain the idea in terms common to both. A dead state is added for missing moves and removed from the result. A state that can never reach acceptance is removed too, so diagrams stay readable.
+
+### The lexer's error recovery groups adjacent bad characters
+
+Panic mode deletes one character at a time, as the book describes, and adjacent bad characters are reported as one error, so `@#$` gives one message rather than three.
+
+### The module and the phase are one field
+
+Part 3 lists "phase" among a lesson's frontmatter. Each module is one phase, so the field is named `module` and its value is the module's id.
+
+### A topic with no visualizer can still be completed
+
+Part 11's rule requires using a visualizer, but some Module 0 topics have none until the 3D scenes arrive in Milestone 9. For those topics that requirement is skipped, and reading counts for more on the mastery meter.
+
+### The mastery meter's weights
+
+Part 5 asks for a meter but sets no formula. It is 20% for reading, 20% for using a visualizer and 60% for the best quiz score, because the quiz is the only part that tests recall. Completion follows Part 11's rule exactly. Reading is recorded when the end of the lesson text scrolls into view.
+
+### Quizzes are practice mode for now
+
+This milestone has multiple choice, self-marked short answers, and regex problems the engine grades by proving equivalence. Timed tests, other question types, spaced repetition and AI grading of short answers are Milestone 6, so flashcards only flip for now. The Lab section links to the lab page until Milestone 3, and Ask AI goes to the tutor page until Milestone 4.
+
+### Limits that protect the page
+
+All engine work runs in a Web Worker and stops after 10 seconds. Expressions are limited to 300 characters, DFAs to 300 states, the token player to 4000 characters, and the buffer demo to 400. Each limit gives a readable error. GIF export samples at most 60 frames, and runs on the main thread with pauses, since it needs a canvas.
+
+### Fonts are never inlined
+
+`assetsInlineLimit` is 0, because Vite otherwise turns small fonts into `data:` URLs, which the production content security policy correctly blocks.
+
+### Dependencies added in this milestone
+
+| Package                                                             | Justification                                                                                    |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `fast-check`                                                        | The property tests Part 13 requires. Pure JavaScript, and it shrinks failures to small examples. |
+| `yaml`                                                              | Reads lesson frontmatter on the server.                                                          |
+| `@mdx-js/rollup`, `@mdx-js/mdx`, `remark-frontmatter`, `remark-gfm` | Compiles MDX lessons, which Part 2 requires. The second is for validating lessons in tests.      |
+| `remark-math`, `rehype-katex`, `katex`                              | Renders math at build time. Only KaTeX's CSS and fonts reach the browser.                        |
+| `@xyflow/react`, `framer-motion`                                    | Named in Part 2.                                                                                 |
+| `gifenc`                                                            | Encodes GIF exports. Small, pure JavaScript, and loaded only when used.                          |

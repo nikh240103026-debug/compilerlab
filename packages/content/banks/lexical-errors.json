@@ -1,0 +1,239 @@
+{
+  "summary": [
+    "A lexical error means no token pattern matches any prefix of the remaining input. That is all a lexer can see, so anything that looks like a valid token passes through it.",
+    "Misspelled keywords, missing semicolons, unbalanced parentheses and undeclared variables are invisible to the lexer, because every piece is a valid token. Later phases report them.",
+    "Panic-mode recovery deletes successive characters until a well-formed token can begin. It is simple and always makes progress, but what it leaves behind can confuse the parser.",
+    "The four single-character repairs are delete, insert, replace and transpose. Trying one repair on a prefix of the input is reasonable because most lexical errors involve one character, while finding the fewest repairs for a whole program is too expensive.",
+    "A lexer keeps going after an error so that one run reports as many errors as possible, each with its position. In this tool, adjacent bad characters are grouped into one error."
+  ],
+  "practice": [
+    {
+      "id": "classify-by-phase",
+      "type": "short",
+      "prompt": "For each problem in a C-like program, say which phase reports it, and why.\n\n(a) x = 5 # 3;\n(b) whlie (x < 3) y = 1;\n(c) x = (1 + 2;\n(d) x = y + 1; where y is never declared",
+      "hint": "For each one, first ask: does every piece match a token pattern? If it does, the lexer has nothing to complain about.",
+      "solution": "(a) The lexer: # cannot begin any token here, assuming the language has no such token.\n(b) The parser: whlie is a valid identifier, and an identifier in that position does not fit the grammar.\n(c) The parser: every piece is a valid token, and only the arrangement is wrong.\n(d) Semantic analysis: the program fits the grammar, and the problem is about what y means.",
+      "explanation": "(b) is the tempting one, because a person can see the typo. The lexer cannot, and whlie followed by ( could even be a call to a function with that name, in which case the parser would only object to what comes next. Only (a) has text that no pattern matches.",
+      "difficulty": "easy",
+      "tags": ["detection", "phases"],
+      "exams": ["university"]
+    },
+    {
+      "id": "name-the-repair",
+      "type": "short",
+      "prompt": "A language has -> as a token, and neither - nor > is a token by itself. Name the single repair that turns each of these into p->q.\n\n(a) p>-q\n(b) p-q\n(c) p-=q\n(d) p-#>q",
+      "hint": "The four repairs are delete, insert, replace and transpose. Compare each broken string with p->q, character by character.",
+      "solution": "(a) Transpose: swap > and -.\n(b) Insert: add > after the -.\n(c) Replace: change = to >.\n(d) Delete: remove the #.",
+      "explanation": "(a) can look like a replace, but changing > and - one at a time would take two replacements, while one swap fixes both. (c) can look like a delete and an insert, which would also be two steps. Each answer here needs only one transformation.",
+      "difficulty": "easy",
+      "tags": ["repairs"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "regex-unterminated-string",
+      "type": "regex",
+      "prompt": "Write a pattern for an unterminated string: a double quote followed by any number of characters, none of which is a double quote or a newline.\n\nIn this engine's syntax, a double quote outside a character class must be written as \\\", because a plain \" starts quoted text as in Lex.",
+      "reference": "\\\"[^\"\\n]*",
+      "accepts": ["\"", "\"abc", "\"a b"],
+      "rejects": ["", "abc", "\"abc\"", "\"a\nb"],
+      "hint": "Start with the opening quote. Then you need a character class that excludes two characters, repeated.",
+      "solution": "\\\"[^\"\\n]*",
+      "explanation": "Listed beside a rule for closed strings, this rule fires only on a real mistake, because a closed string is one character longer and longest match prefers it. That lets the lexer report a missing quote directly. Using .* instead of the class is the tempting wrong answer, because .* can run past a closing quote and swallow the rest of the line.",
+      "difficulty": "medium",
+      "tags": ["regex", "strings"],
+      "exams": ["university"]
+    },
+    {
+      "id": "panic-splits-identifier",
+      "type": "mcq",
+      "prompt": "This tool has rules for identifiers, numbers, =, ; and whitespace. It scans this input:\n\npri@ntf = 1;\n\nHow many tokens does it pass to the parser, and how many errors does it record?",
+      "options": [
+        "5 tokens and 1 error",
+        "4 tokens and 1 error",
+        "4 tokens and no errors",
+        "No tokens and 1 error, because the scan stops"
+      ],
+      "answer": 0,
+      "hint": "Panic mode deletes the bad character. Does anything put the characters on each side of it back together?",
+      "solution": "5 tokens and 1 error: pri, ntf, =, 1 and ;.",
+      "explanation": "The @ ends the identifier pri, and the error is recorded. After deleting it, scanning restarts and reads ntf as a new identifier. 4 tokens assumes that deleting @ rejoins the word into printf, which it does not. The scan never stops at a lexical error.",
+      "difficulty": "medium",
+      "tags": ["panic-mode", "counting"],
+      "exams": ["GATE", "university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "detectable-by-lexer",
+      "type": "mcq",
+      "prompt": "Which error is the lexer most likely to report?",
+      "options": [
+        "A stray @ in a C program",
+        "A missing semicolon",
+        "A variable that was never declared",
+        "Adding a string to an integer"
+      ],
+      "answer": 0,
+      "hint": "Which of these is visible from the characters alone, with no knowledge of grammar or meaning?",
+      "solution": "A stray @ in a C program.",
+      "explanation": "No C token can begin with @, so no pattern matches. A missing semicolon is a matter of how tokens are arranged, which is the parser's job. Declarations and types need meaning, which semantic analysis handles.",
+      "difficulty": "easy",
+      "tags": ["detection"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "misspelled-while",
+      "type": "mcq",
+      "prompt": "A programmer types whlie (x < 3) instead of while (x < 3). What does the lexer do with whlie?",
+      "options": [
+        "Reports a misspelled keyword",
+        "Returns the token for while, after a spelling repair",
+        "Deletes it as panic-mode recovery",
+        "Returns it as an identifier"
+      ],
+      "answer": 3,
+      "hint": "Does whlie match any token pattern?",
+      "solution": "Returns it as an identifier.",
+      "explanation": "whlie is a perfectly valid identifier, so there is no lexical error at all. Single-character repairs and panic mode apply only when no pattern matches, and here one does. The lexer has no notion of a word being nearly a keyword.",
+      "difficulty": "easy",
+      "tags": ["detection", "keywords"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "panic-mode-definition",
+      "type": "mcq",
+      "prompt": "What does panic-mode recovery do in a lexer?",
+      "options": [
+        "Stops the compiler at the first bad character",
+        "Discards tokens until it reaches a synchronizing token such as a semicolon",
+        "Deletes successive characters until a well-formed token can begin",
+        "Inserts the character most likely to be missing"
+      ],
+      "answer": 2,
+      "hint": "Panic mode is the simplest possible recovery. It only ever removes input.",
+      "solution": "Deletes successive characters until a well-formed token can begin.",
+      "explanation": "Discarding tokens is what panic mode means in the parser, which is why that option is tempting: the name is the same, but a lexer works on characters. Stopping at the first error is what recovery exists to avoid. Inserting a character is one of the repair strategies, and panic mode does not use it.",
+      "difficulty": "easy",
+      "tags": ["panic-mode"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "not-a-repair",
+      "type": "mcq",
+      "prompt": "Which of these is NOT one of the four single-character repairs?",
+      "options": [
+        "Delete one character",
+        "Replace one character with another",
+        "Transpose two adjacent tokens",
+        "Insert a missing character"
+      ],
+      "answer": 2,
+      "hint": "All four work at the same level of the input. Which option works at a different level?",
+      "solution": "Transpose two adjacent tokens.",
+      "explanation": "The fourth repair transposes two adjacent characters, not tokens. A lexer works on characters and has no business rearranging tokens, which it has already produced. The other three options are all on the list.",
+      "difficulty": "easy",
+      "tags": ["repairs"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "identify-transpose",
+      "type": "mcq",
+      "prompt": "A language has := as a token, and neither : nor = is a token by itself. Which single repair turns x =: 1 into x := 1?",
+      "options": ["Delete", "Insert", "Replace", "Transpose"],
+      "answer": 3,
+      "hint": "Both characters are already there. What is wrong with them?",
+      "solution": "Transpose",
+      "explanation": "Swapping the two adjacent characters fixes it in one step. Replace is the tempting answer, but it would take two replacements, one for each character. Deleting either character leaves : or =, which are not tokens here, and inserting a character cannot fix the order.",
+      "difficulty": "easy",
+      "tags": ["repairs"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "count-errors-in-tool",
+      "type": "mcq",
+      "prompt": "This tool has rules for identifiers and whitespace, and groups adjacent bad characters into one error. How many errors does it report for @ x @@ y?",
+      "options": ["1", "2", "3", "4"],
+      "answer": 1,
+      "hint": "Find each run of bad characters with nothing between them.",
+      "solution": "2",
+      "explanation": "The first @ is one run, and @@ is a second run, because x and the spaces separate them. 3 counts each bad character separately, which this tool does not do for adjacent ones. 1 would be right only if the valid text between the runs did not end the first error.",
+      "difficulty": "easy",
+      "tags": ["panic-mode", "counting"],
+      "exams": ["university"]
+    },
+    {
+      "id": "why-not-fewest-repairs",
+      "type": "mcq",
+      "prompt": "Why do lexers not usually search for the smallest number of transformations that would make the whole program valid?",
+      "options": [
+        "It is impossible to define such a number",
+        "It is too expensive in practice, and most lexical errors involve only one character",
+        "It would require changing the language's grammar",
+        "Lexers are not able to read ahead"
+      ],
+      "answer": 1,
+      "hint": "The idea is sound. What is the practical objection?",
+      "solution": "It is too expensive in practice, and most lexical errors involve only one character.",
+      "explanation": "The number is well defined, and it could be computed. It just costs more than it is worth, since trying a single transformation handles the common case. The grammar is not involved at this level, and lexers read ahead all the time when looking for the longest match.",
+      "difficulty": "medium",
+      "tags": ["repairs"],
+      "exams": ["university"]
+    },
+    {
+      "id": "why-keep-going",
+      "type": "mcq",
+      "prompt": "Why does a lexer keep scanning after a lexical error?",
+      "options": [
+        "So that one run can report more of the errors in the program",
+        "So that the program can still be compiled and run",
+        "So that it can fix the source file",
+        "Because the parser cannot start until the whole file is scanned"
+      ],
+      "answer": 0,
+      "hint": "Think about how many times a programmer would have to compile otherwise.",
+      "solution": "So that one run can report more of the errors in the program.",
+      "explanation": "Fixing one error per compile is slow, so reporting several in a run saves time. The compile has already failed, so the program will not run. Recovery only affects what the compiler reads in memory, and never edits the file. The parser usually asks for tokens one at a time, so it does not wait for the whole file.",
+      "difficulty": "easy",
+      "tags": ["recovery"],
+      "exams": ["university"]
+    },
+    {
+      "id": "explain-panic-tradeoff",
+      "type": "short",
+      "prompt": "Explain panic-mode recovery in a lexer. Give one strength and one risk, with an example of the risk.",
+      "hint": "Think about what happens to the parser after some characters silently disappear.",
+      "solution": "Panic mode deletes characters from the remaining input until a well-formed token can begin.\n\nStrength: it is simple, and it always makes progress, so the lexer can continue and find more errors.\n\nRisk: what remains may not be what the programmer meant, which confuses the parser. For example, in pri@ntf the lexer produces the two identifiers pri and ntf, so the parser reports a further error that is not the real problem.",
+      "explanation": "Any example is fine if it shows deleted characters leading to a misleading follow-up error. Another is y = 3 ? 4; which becomes y = 3 4; once the ? is deleted, so the parser reports a missing operator.",
+      "difficulty": "easy",
+      "tags": ["panic-mode"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a lexical error?",
+      "back": "The lexer cannot continue because no token pattern matches any prefix of the remaining input.",
+      "tags": ["detection"]
+    },
+    {
+      "front": "Why can't the lexer flag fi as a misspelled if?",
+      "back": "fi is a valid identifier and could be a function's name. The characters alone cannot show a mistake, so the lexer returns id and leaves it to later phases.",
+      "tags": ["detection"]
+    },
+    {
+      "front": "What does panic-mode recovery do in a lexer?",
+      "back": "It deletes successive characters from the remaining input until a well-formed token can begin.",
+      "tags": ["panic-mode"]
+    },
+    {
+      "front": "What are the four single-character repairs?",
+      "back": "Delete a character, insert a missing character, replace a character with another, and transpose two adjacent characters.",
+      "tags": ["repairs"]
+    },
+    {
+      "front": "How does this tool report adjacent bad characters, and what does it do next?",
+      "back": "It groups them into one error, then continues scanning from the next character.",
+      "tags": ["panic-mode", "tool"]
+    }
+  ]
+}

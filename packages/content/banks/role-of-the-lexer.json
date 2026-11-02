@@ -1,0 +1,208 @@
+{
+  "summary": [
+    "The lexer is the first phase of a compiler: it reads characters, groups them into lexemes, and produces one token for each.",
+    "It usually runs on demand, returning one token each time the parser calls getNextToken.",
+    "It also removes comments and whitespace, tracks line and column numbers, and reports errors that are visible at the character level.",
+    "Keeping lexing separate from parsing makes the design simpler, makes the compiler faster, and keeps input-specific details in one place.",
+    "A token is a pair of a token name, which the parser uses, and an optional attribute value, which later phases use."
+  ],
+  "practice": [
+    {
+      "id": "count-tokens-assignment",
+      "type": "mcq",
+      "prompt": "How many tokens does a typical C lexer produce for this line?\n\ntotal = total + 1;",
+      "options": ["3", "6", "7", "18"],
+      "answer": 1,
+      "hint": "Whitespace produces no tokens. Count identifiers, operators, numbers and punctuation.",
+      "solution": "6 tokens: total, =, total, +, 1 and ;",
+      "explanation": "Each maximal meaningful chunk is one token, and whitespace is discarded. The semicolon counts: forgetting it gives 5. Counting characters instead of lexemes gives a much larger number.",
+      "difficulty": "easy",
+      "tags": ["tokens", "counting"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "lexer-or-parser",
+      "type": "short",
+      "prompt": "For each problem, say whether the lexer or the parser finds it, and why.\n\n(a) A stray @ character in a C program\n(b) A missing closing parenthesis in x = (1 + 2;",
+      "hint": "Ask whether the problem can be seen by looking at characters alone, or whether it depends on how tokens are arranged.",
+      "solution": "(a) The lexer: no token can begin with @, so this is visible from the characters alone.\n(b) The parser: every piece is a valid token, and the problem is only in how they are arranged.",
+      "explanation": "The lexer knows which character sequences form tokens. It has no idea what order tokens should come in, which is what the grammar, and therefore the parser, is for.",
+      "difficulty": "easy",
+      "tags": ["errors", "phases"],
+      "exams": ["university"]
+    },
+    {
+      "id": "regex-identifier",
+      "type": "regex",
+      "prompt": "Write a regular expression for identifiers: a letter (a-z or A-Z) followed by any number of letters or digits. Underscores are not allowed.",
+      "reference": "[a-zA-Z][a-zA-Z0-9]*",
+      "accepts": ["x", "count", "X1", "a1b2"],
+      "rejects": ["", "1x", "_x", "a_b"],
+      "hint": "Describe the first character separately from the rest. Use a character class for each part.",
+      "solution": "[a-zA-Z][a-zA-Z0-9]*",
+      "explanation": "The first class requires a letter, so an identifier cannot start with a digit. The star on the second class allows any number of letters or digits after it, including none, so a single letter is valid.",
+      "difficulty": "easy",
+      "tags": ["regex", "identifiers"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "why-longest-match",
+      "type": "short",
+      "prompt": "A lexer reading x ** 2 has just read the first * and has a valid match for the multiplication operator. Why must it read another character before deciding?",
+      "hint": "What other token begins with the same character?",
+      "solution": "Because ** is also a token, and the lexer can only tell which one it has by looking at the next character.",
+      "explanation": "The rule is to take the longest possible match. Stopping at the first valid match would split ** into two multiplication operators, which is a different program.",
+      "difficulty": "medium",
+      "tags": ["longest-match", "lookahead"],
+      "exams": ["university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "first-phase",
+      "type": "mcq",
+      "prompt": "What does the lexer produce as output?",
+      "options": [
+        "A parse tree",
+        "A stream of tokens",
+        "Three-address code",
+        "A symbol table and nothing else"
+      ],
+      "answer": 1,
+      "hint": "It is the input the parser works with.",
+      "solution": "A stream of tokens.",
+      "explanation": "The parser builds the parse tree from tokens, and intermediate code comes later still. The lexer may add entries to the symbol table, but its main output is the token stream.",
+      "difficulty": "easy",
+      "tags": ["phases"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "interaction",
+      "type": "mcq",
+      "prompt": "How do the lexer and parser usually work together?",
+      "options": [
+        "The lexer converts the whole file to tokens, then the parser starts",
+        "The parser reads characters and asks the lexer to check them",
+        "The parser asks for the next token, and the lexer reads just enough input to produce it",
+        "They run independently and compare their results at the end"
+      ],
+      "answer": 2,
+      "hint": "Think about a function named getNextToken.",
+      "solution": "The parser asks for the next token, and the lexer reads just enough input to produce it.",
+      "explanation": "On-demand scanning is the usual arrangement. A separate pass is possible, but it is not how the two phases normally interact, and the parser never reads characters itself.",
+      "difficulty": "easy",
+      "tags": ["parser-interaction"],
+      "exams": ["university"]
+    },
+    {
+      "id": "not-lexer-job",
+      "type": "mcq",
+      "prompt": "Which of these is NOT normally a job for the lexer?",
+      "options": [
+        "Removing comments",
+        "Tracking line numbers",
+        "Checking that parentheses are balanced",
+        "Removing whitespace"
+      ],
+      "answer": 2,
+      "hint": "Balancing needs to count nesting, which a finite automaton cannot do.",
+      "solution": "Checking that parentheses are balanced.",
+      "explanation": "Balanced parentheses are not a regular language, so they cannot be recognized by the finite automata a lexer is built from. The parser handles this using its grammar. The other three are standard lexer tasks.",
+      "difficulty": "medium",
+      "tags": ["lexer-jobs", "regular-languages"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "separation-reasons",
+      "type": "mcq",
+      "prompt": "Which is a reason to separate lexical analysis from parsing?",
+      "options": [
+        "It lets the compiler skip semantic analysis",
+        "It keeps the grammar simpler, because the parser need not handle whitespace and comments",
+        "It removes the need for a symbol table",
+        "It makes regular expressions as powerful as grammars"
+      ],
+      "answer": 1,
+      "hint": "The three standard reasons are simplicity, speed and portability.",
+      "solution": "It keeps the grammar simpler, because the parser need not handle whitespace and comments.",
+      "explanation": "Simplicity of design is one of the three classic reasons. Semantic analysis and the symbol table are still needed, and separating the phases has no effect on how powerful regular expressions are.",
+      "difficulty": "easy",
+      "tags": ["design"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "fi-keyword",
+      "type": "mcq",
+      "prompt": "A C programmer types fi (a == b) instead of if (a == b). What does the lexer do with fi?",
+      "options": [
+        "Reports a misspelled keyword",
+        "Corrects it to if",
+        "Returns it as an identifier",
+        "Skips it as an unknown word"
+      ],
+      "answer": 2,
+      "hint": "Does fi match the pattern for any kind of token?",
+      "solution": "Returns it as an identifier.",
+      "explanation": "fi is a valid identifier, so the lexer has no way to know a keyword was meant. It might be a function being called. A later phase reports the problem, if there is one at all.",
+      "difficulty": "medium",
+      "tags": ["errors"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "attribute-purpose",
+      "type": "mcq",
+      "prompt": "Why does an identifier token carry an attribute value?",
+      "options": [
+        "The parser cannot accept a token without one",
+        "Later phases need to know which identifier it was, not only that it was an identifier",
+        "It stores the identifier's line number instead of a symbol-table entry",
+        "It tells the lexer when to stop reading"
+      ],
+      "answer": 1,
+      "hint": "The parser only needs the token name. Who needs more?",
+      "solution": "Later phases need to know which identifier it was, not only that it was an identifier.",
+      "explanation": "For the grammar, all identifiers are alike, so the token name is enough. Semantic analysis and code generation must tell x from y, so the attribute typically points at the identifier's symbol-table entry. Tokens like + often need no attribute at all.",
+      "difficulty": "medium",
+      "tags": ["attributes", "symbol-table"],
+      "exams": ["university"]
+    },
+    {
+      "id": "explain-separation",
+      "type": "short",
+      "prompt": "Give three reasons why a compiler separates the lexer from the parser, with a sentence on each.",
+      "hint": "One is about the design, one about speed, and one about input details.",
+      "solution": "Simplicity: the parser's grammar need not mention whitespace and comments.\nEfficiency: a separate lexer can use specialized techniques, such as buffering, for reading characters quickly.\nPortability: details of the input, such as character sets, stay in the lexer.",
+      "explanation": "These are the three reasons the Dragon Book gives. A good answer explains each briefly, not only names it. It is also fair to add that tokens can be described with regular expressions, so tools can generate the lexer.",
+      "difficulty": "easy",
+      "tags": ["design"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does a lexer take as input, and what does it produce?",
+      "back": "It takes a stream of characters and produces a stream of tokens.",
+      "tags": ["basics"]
+    },
+    {
+      "front": "What function does the parser traditionally call to get a token?",
+      "back": "getNextToken",
+      "tags": ["parser-interaction"]
+    },
+    {
+      "front": "Name the three classic reasons to separate lexing from parsing.",
+      "back": "Simpler design, better efficiency, and better portability.",
+      "tags": ["design"]
+    },
+    {
+      "front": "What two parts does a token have?",
+      "back": "A token name, used by the parser, and an optional attribute value, used by later phases.",
+      "tags": ["tokens"]
+    },
+    {
+      "front": "Besides producing tokens, name three jobs a lexer does.",
+      "back": "It removes comments and whitespace, tracks line and column numbers, and reports errors visible at the character level.",
+      "tags": ["lexer-jobs"]
+    }
+  ]
+}

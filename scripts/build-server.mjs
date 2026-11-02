@@ -7,7 +7,14 @@ import { join } from 'node:path';
 import { ROOT } from './lib/env.mjs';
 
 const serverDir = join(ROOT, 'apps', 'server');
-const pkg = JSON.parse(readFileSync(join(serverDir, 'package.json'), 'utf8'));
+const dependenciesOf = (/** @type {string} */ dir) =>
+  Object.keys(JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).dependencies ?? {});
+
+// The workspace packages get bundled, but what they depend on must stay external too. Some of
+// those are CommonJS, which cannot be inlined into an ES module bundle.
+const external = [serverDir, join(ROOT, 'packages', 'content'), join(ROOT, 'packages', 'shared')]
+  .flatMap(dependenciesOf)
+  .filter((name) => !name.startsWith('@compilerlab/'));
 
 await build({
   entryPoints: [join(serverDir, 'src', 'index.ts')],
@@ -16,7 +23,7 @@ await build({
   platform: 'node',
   format: 'esm',
   target: 'node22',
-  external: Object.keys(pkg.dependencies).filter((name) => !name.startsWith('@compilerlab/')),
+  external,
   logLevel: 'warning',
 });
 

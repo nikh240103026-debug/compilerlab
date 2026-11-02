@@ -1,0 +1,270 @@
+---
+id: tokens-lexemes-patterns
+module: lexical-analysis
+title: Tokens, lexemes and patterns
+order: 2
+estimatedMinutes: 25
+prerequisites:
+  - role-of-the-lexer
+outcomes:
+  - Define token, lexeme and pattern, and tell them apart in real code
+  - Explain what an attribute value is and which tokens need one
+  - Name the five common classes of tokens and give examples of each
+  - Count the tokens in a line of C, including cases with comments, strings and multi-character operators
+visualizers:
+  - id: token-stream
+    label: Token stream
+    props:
+      source: 'printf("Total = %d\n", score);'
+      rules: |
+        INT      int                     %keyword
+        FLOAT    float                   %keyword
+        CHAR     char                    %keyword
+        IF       if                      %keyword
+        ELSE     else                    %keyword
+        WHILE    while                   %keyword
+        FOR      for                     %keyword
+        RETURN   return                  %keyword
+        ID       [A-Za-z_][A-Za-z0-9_]*  %identifier
+        NUMBER   [0-9]+(\.[0-9]+)?       %literal
+        STRING   \"([^"\\\n]|\\.)*\"     %literal
+        CHARCON  '([^'\\\n]|\\.)+'       %literal
+        COMPARE  <=|>=|==|!=|<|>         %operator
+        INCDEC   \+\+|--                 %operator
+        ASSIGN   =|\+=|-=|\*=|/=         %operator
+        ARROW    ->                      %operator
+        LOGIC    &&|\|\||!               %operator
+        OTHEROP  [-+*/%&?:.]             %operator
+        PUNCT    [(){}\[\];,]            %punctuation
+        LINE     //[^\n]*                %comment %skip
+        BLOCK    /\*([^*]|\*+[^*/])*\*+/ %comment %skip
+        WS       \s+                     %skip
+---
+
+## Why this matters
+
+Look at this line of C:
+
+```c
+count = count + 1;
+```
+
+How many tokens is that? Is `count` a token, or is `id` the token? Do the spaces count? Is `if` the same kind of thing as `count`?
+
+You cannot answer these without three words used precisely: **token**, **lexeme** and **pattern**. People mix them up all the time, and exams test the difference directly. Exams also ask you to count the tokens in a piece of code. That is easy once you know the rules, and easy to get wrong if you guess.
+
+## The three words
+
+Each word names a different thing:
+
+- A **lexeme** is the actual text. It is a run of characters in the source program that matches a token's pattern, and that the lexer treats as an instance of that token. In the line above, `count` is a lexeme, and so is `=`.
+- A **pattern** is a description of the form a token's lexemes may take. For a keyword, the pattern is just the word itself. For identifiers, it is a rule that many strings match, such as "a letter followed by letters and digits".
+- A **token** is what the lexer hands to the parser. It is a pair: a **token name** and an optional **attribute value**. The token name is an abstract symbol for a kind of lexical unit, such as `id` or `number`, and it is what the parser's grammar is written in.
+
+So the pattern is the rule, the lexeme is the text that obeys the rule, and the token is the record the lexer produces as a result.
+
+This table shows all three side by side, using examples in the style of the Dragon Book:
+
+| Token name | Pattern, in words | Sample lexemes |
+| --- | --- | --- |
+| `if` | the characters `i`, `f` | `if` |
+| `else` | the characters `e`, `l`, `s`, `e` | `else` |
+| `comparison` | `<` or `>` or `<=` or `>=` or `==` or `!=` | `<=`, `!=` |
+| `id` | a letter followed by letters and digits | `pi`, `score`, `D2` |
+| `number` | any numeric constant | `3.14159`, `0`, `6.02e23` |
+| `literal` | anything but `"`, surrounded by `"` | `"core dumped"` |
+
+Now take the C statement in the visualizer: `printf("Total = %d\n", score);`. Both `printf` and `score` are lexemes matching the pattern for `id`, and `"Total = %d\n"` is a lexeme matching the pattern for `literal`. Press play and watch each chip appear. A chip shows the token name, then the lexeme, then its line and column.
+
+<Callout kind="note" title="The word token is used loosely">
+"The token `id`" means the token name, the *kind* of thing. "This line has six tokens" means six entries in the stream, one for each lexeme. When you count tokens, you count entries in the stream, so `count = count + 1;` has two `id` tokens, not one.
+</Callout>
+
+## Attributes
+
+The parser only needs token names. As far as the grammar is concerned, `x = 0;` and `y = 1;` have the same shape: `id`, `=`, `number`, `;`. Later phases do need to know the difference, because the generated code must store a different value in a different place.
+
+So when more than one lexeme can match a pattern, the lexer also returns an **attribute value** that says which lexeme it found. The token name influences parsing decisions. The attribute value influences what happens to the token after parsing.
+
+The usual assumption is that a token has at most one attribute, but that attribute can be a structure holding several pieces of information. The most important case is `id`. An identifier's details, such as its lexeme, its type and where it first appeared, live in the symbol table, so the attribute is usually a pointer to its entry there.
+
+Here is the `printf` statement as pairs:
+
+| Lexeme | Token name | Attribute value |
+| --- | --- | --- |
+| `printf` | `id` | pointer to the symbol-table entry for `printf` |
+| `(` | `left_paren` | none needed |
+| `"Total = %d\n"` | `literal` | pointer to the text of the string |
+| `,` | `comma` | none needed |
+| `score` | `id` | pointer to the symbol-table entry for `score` |
+| `)` | `right_paren` | none needed |
+| `;` | `semicolon` | none needed |
+
+Tokens whose pattern matches only one lexeme, such as keywords and punctuation symbols, need no attribute, because the name says everything. A grouped token such as `comparison` does need one, to say which of its six operators it was.
+
+<Callout kind="textbook" title="What attribute does a number have?">
+The Dragon Book's example for `E = M * C ** 2` gives `number` an integer value as its attribute. It then says a typical compiler would instead store a character string for the constant and use a pointer to that string as the attribute. You may see either in notes and exam answers. The point is the same in both: the attribute says which number it was.
+</Callout>
+
+## Common classes of tokens
+
+In many languages, five classes cover most or all of the tokens:
+
+1. **Keywords.** One token for each keyword, and the pattern is the keyword itself: `if`, `while`, `return`.
+2. **Operators.** Either one token each, or grouped into classes such as `comparison`: `+`, `=`, `<=`, `++`.
+3. **Identifiers.** One token for all identifiers: `count`, `x1`, `printf`.
+4. **Constants.** One or more tokens for numbers and string literals: `42`, `3.14`, `"hello"`.
+5. **Punctuation.** A token for each symbol: `(`, `)`, `,`, `;`.
+
+The rules in the visualizer follow this plan. Each line gives a token name, its pattern and a color tag. The list is a small subset of C, enough for this lesson's examples, and it groups some operators to stay short.
+
+Notice that `if` matches the pattern for `IF` and also the pattern for `ID`. Two rules settle such conflicts. The longest match wins, so `iffy` is an identifier. If two patterns match the same length, the earlier rule wins, so `if` is a keyword. That is why the keywords come first in the list.
+
+<TryIt visualizer="token-stream" source="if (iffy) x = 1;" rules="INT int %keyword
+FLOAT float %keyword
+CHAR char %keyword
+IF if %keyword
+ELSE else %keyword
+WHILE while %keyword
+FOR for %keyword
+RETURN return %keyword
+ID [A-Za-z_][A-Za-z0-9_]* %identifier
+NUMBER [0-9]+(\.[0-9]+)? %literal
+STRING \&quot;([^&quot;\\\n]|\\.)*\&quot; %literal
+CHARCON '([^'\\\n]|\\.)+' %literal
+COMPARE <=|>=|==|!=|<|> %operator
+INCDEC \+\+|-- %operator
+ASSIGN =|\+=|-=|\*=|/= %operator
+ARROW -> %operator
+LOGIC &&|\|\||! %operator
+OTHEROP [-+*/%&?:.] %operator
+PUNCT [(){}\[\];,] %punctuation
+LINE //[^\n]* %comment %skip
+BLOCK /\*([^*]|\*+[^*/])*\*+/ %comment %skip
+WS \s+ %skip">Compare if and iffy</TryIt>
+
+## Counting tokens
+
+To count the tokens in a piece of code, follow four rules:
+
+1. **Ignore whitespace and comments.** The lexer reads them, but they produce no tokens.
+2. **Work left to right, taking the longest possible lexeme each time.** So `>=` is one token, and so are `==`, `++` and `->`.
+3. **Count every occurrence.** An identifier used three times is three tokens.
+4. **Treat a string or character constant as one lexeme,** whatever is inside it.
+
+<Callout kind="textbook" title="Preprocessor lines">
+Exam questions on C sometimes include lines such as `#include <stdio.h>`. In the Dragon Book's picture of a language-processing system, the preprocessor is a separate step before the compiler, so a line like that never reaches the lexer. Hand-counting conventions for such lines vary, so check what the question expects. The rules in this visualizer have no rule for `#`.
+</Callout>
+
+## Worked example
+
+Here is a classic exam-style question. How many tokens are in this statement?
+
+```c
+printf("i = %d, &i = %x", i, &i);
+```
+
+Go left to right, taking the longest lexeme each time:
+
+| # | Lexeme | Class |
+| --- | --- | --- |
+| 1 | `printf` | identifier |
+| 2 | `(` | punctuation |
+| 3 | `"i = %d, &i = %x"` | constant (string literal) |
+| 4 | `,` | punctuation |
+| 5 | `i` | identifier |
+| 6 | `,` | punctuation |
+| 7 | `&` | operator |
+| 8 | `i` | identifier |
+| 9 | `)` | punctuation |
+| 10 | `;` | punctuation |
+
+The answer is **10**. Three things to notice:
+
+1. **The string is one token.** The `%d`, the commas and the `&i` inside the quotes are just characters of that one lexeme.
+2. **`printf` is an identifier, not a keyword.** It is the name of a library function. This does not change the count, but it does change the token name.
+3. **`&i` is two tokens.** The `&` is an operator, and `i` is an identifier.
+
+<TryIt visualizer="token-stream" source='printf("i = %d, &i = %x", i, &i);' rules="INT int %keyword
+FLOAT float %keyword
+CHAR char %keyword
+IF if %keyword
+ELSE else %keyword
+WHILE while %keyword
+FOR for %keyword
+RETURN return %keyword
+ID [A-Za-z_][A-Za-z0-9_]* %identifier
+NUMBER [0-9]+(\.[0-9]+)? %literal
+STRING \&quot;([^&quot;\\\n]|\\.)*\&quot; %literal
+CHARCON '([^'\\\n]|\\.)+' %literal
+COMPARE <=|>=|==|!=|<|> %operator
+INCDEC \+\+|-- %operator
+ASSIGN =|\+=|-=|\*=|/= %operator
+ARROW -> %operator
+LOGIC &&|\|\||! %operator
+OTHEROP [-+*/%&?:.] %operator
+PUNCT [(){}\[\];,] %punctuation
+LINE //[^\n]* %comment %skip
+BLOCK /\*([^*]|\*+[^*/])*\*+/ %comment %skip
+WS \s+ %skip">Count these tokens</TryIt>
+
+Now a harder one: `x = a+++b;`. The first three lexemes are easy: `x`, `=` and `a`. Then the lexer reads `+`, and then another `+`, which gives the valid lexeme `++`. A third `+` would make `+++`, which is not an operator, so the longest match is `++`. The next lexeme starts at the third `+`, which stands alone. That gives `x`, `=`, `a`, `++`, `+`, `b` and `;`, so **7** tokens. The lexer does not try to guess what you meant. It takes the longest match every time.
+
+<TryIt visualizer="token-stream" source="x = a+++b;" rules="INT int %keyword
+FLOAT float %keyword
+CHAR char %keyword
+IF if %keyword
+ELSE else %keyword
+WHILE while %keyword
+FOR for %keyword
+RETURN return %keyword
+ID [A-Za-z_][A-Za-z0-9_]* %identifier
+NUMBER [0-9]+(\.[0-9]+)? %literal
+STRING \&quot;([^&quot;\\\n]|\\.)*\&quot; %literal
+CHARCON '([^'\\\n]|\\.)+' %literal
+COMPARE <=|>=|==|!=|<|> %operator
+INCDEC \+\+|-- %operator
+ASSIGN =|\+=|-=|\*=|/= %operator
+ARROW -> %operator
+LOGIC &&|\|\||! %operator
+OTHEROP [-+*/%&?:.] %operator
+PUNCT [(){}\[\];,] %punctuation
+LINE //[^\n]* %comment %skip
+BLOCK /\*([^*]|\*+[^*/])*\*+/ %comment %skip
+WS \s+ %skip">Watch the longest match</TryIt>
+
+Last, a line with a comment and a string that looks like one: `s = "/* not a comment */"; // done`. Inside a string, `/*` and `*/` are ordinary characters, so the whole quoted text is one lexeme. After the semicolon, `//` really does begin a comment, which produces no token. That gives `s`, `=`, the string and `;`, so **4** tokens.
+
+<TryIt visualizer="token-stream" source='s = "/* not a comment */"; // done' rules="INT int %keyword
+FLOAT float %keyword
+CHAR char %keyword
+IF if %keyword
+ELSE else %keyword
+WHILE while %keyword
+FOR for %keyword
+RETURN return %keyword
+ID [A-Za-z_][A-Za-z0-9_]* %identifier
+NUMBER [0-9]+(\.[0-9]+)? %literal
+STRING \&quot;([^&quot;\\\n]|\\.)*\&quot; %literal
+CHARCON '([^'\\\n]|\\.)+' %literal
+COMPARE <=|>=|==|!=|<|> %operator
+INCDEC \+\+|-- %operator
+ASSIGN =|\+=|-=|\*=|/= %operator
+ARROW -> %operator
+LOGIC &&|\|\||! %operator
+OTHEROP [-+*/%&?:.] %operator
+PUNCT [(){}\[\];,] %punctuation
+LINE //[^\n]* %comment %skip
+BLOCK /\*([^*]|\*+[^*/])*\*+/ %comment %skip
+WS \s+ %skip">See the comment skipped</TryIt>
+
+## Common mistakes
+
+- **Calling `count` a token.** `count` is a lexeme. Its token name is `id`. The token is the pair of that name and an attribute that points to `count` in the symbol table.
+- **Counting kinds instead of occurrences.** `count = count + 1;` has 6 tokens, not 5. The two uses of `count` are two tokens.
+- **Splitting multi-character operators.** `>=`, `==`, `++`, `+=` and `->` are each one token. The longest match keeps them together.
+- **Counting inside strings.** Everything between the quotes belongs to one lexeme, including spaces, commas and things that look like comments.
+- **Counting comments or whitespace.** They separate tokens but are not tokens themselves. Removing the spaces from `x = 1;` still gives 4 tokens. A space does matter when it is all that separates two lexemes: `int x` is 2 tokens, but `intx` is 1.
+- **Treating `printf` or `main` as keywords.** In C they are ordinary identifiers. Keywords are the reserved words such as `int`, `if` and `return`.
+- **Thinking grouping changes the count.** A lexer can use one `comparison` token or six separate ones. Each lexeme still gives one token, so the count is the same. Only the token names differ.
+- **Forgetting that the count depends on the language.** `**` is one token in Fortran, as in the last lesson's `E = M * C ** 2`. C has no such operator, so `a ** b` in C has two `*` tokens.

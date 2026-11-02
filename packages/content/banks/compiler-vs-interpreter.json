@@ -1,0 +1,246 @@
+{
+  "summary": [
+    "A compiler translates a source program into an equivalent target program and reports errors along the way, but it does not run the program.",
+    "An interpreter produces no target program: it takes the source program and the input together and appears to carry out the operations directly.",
+    "A compiled program usually runs much faster, while an interpreter can usually give better error diagnostics at run time because it works statement by statement.",
+    "An assembler turns assembly language into relocatable machine code, a linker combines such code and libraries into an executable, and a loader puts the executable in memory and starts it.",
+    "Java is a hybrid: javac compiles source to bytecode, a virtual machine interprets the bytecode, and a just-in-time compiler can translate bytecode to machine code during the run."
+  ],
+  "practice": [
+    {
+      "id": "name-the-program",
+      "type": "short",
+      "prompt": "Name the program that does each job.\n\n(a) Turns ADD and LOAD instructions written as text into relocatable machine code\n(b) Fills in the address of a function that was defined in a different source file\n(c) Copies an executable into memory and starts it\n(d) Runs a source program directly on the user's input, with no separate target program",
+      "hint": "Ask what each job takes in and what it produces.",
+      "solution": "(a) Assembler\n(b) Linker\n(c) Loader\n(d) Interpreter",
+      "explanation": "The assembler's input is assembly language. The linker sees all the pieces at once, so it can resolve references between files, which a compiler working on one file cannot. The loader acts when the program is launched, after the build is over. An interpreter is defined by not producing a target program.",
+      "difficulty": "easy",
+      "tags": ["definitions"],
+      "exams": ["university"]
+    },
+    {
+      "id": "advantages-both-ways",
+      "type": "short",
+      "prompt": "Give two advantages of a compiler over an interpreter, and two advantages of an interpreter over a compiler.",
+      "hint": "Think about what happens each time a statement in a loop runs, what must be installed to run the program, and when an error is noticed.",
+      "solution": "Compiler over interpreter:\n1. The target program usually runs much faster, because each statement is analyzed only once.\n2. The compiler is not needed at run time, only the target program and its libraries.\n\nInterpreter over compiler:\n1. It can usually give better error diagnostics at run time, because it works statement by statement.\n2. The program can start at once, and the same source runs on any machine with an interpreter.",
+      "explanation": "Speed and diagnostics are the two points the Dragon Book makes directly. Other fair answers are that a compiler can report errors in code the current run would never reach, and that an interpreter makes it easy to change a program and try it again. A weak answer lists only 'faster' and 'slower' without giving the reason.",
+      "difficulty": "easy",
+      "tags": ["trade-offs"],
+      "exams": ["university"]
+    },
+    {
+      "id": "classify-translators",
+      "type": "mcq",
+      "prompt": "A tool reads TypeScript and writes JavaScript, and the JavaScript is then run by a separate program. What is the tool?",
+      "options": [
+        "A compiler, because it translates one language into another and does not run the program",
+        "An interpreter, because its output is not machine code",
+        "An assembler, because its output is another text format",
+        "A linker, because it prepares code for a separate program"
+      ],
+      "answer": 0,
+      "hint": "Go back to the definition of a compiler. Does it say anything about what the target language must be?",
+      "solution": "A compiler, because it translates one language into another and does not run the program.",
+      "explanation": "Producing an equivalent program in another language is what defines a compiler, and the target need not be machine code. It is not an interpreter, because it runs nothing. An assembler's input is assembly language, and a linker combines already translated pieces rather than translating a language. A compiler whose target is another high-level language is often called a source-to-source translator.",
+      "difficulty": "medium",
+      "tags": ["definitions", "source-to-source"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "explain-java-path",
+      "type": "short",
+      "prompt": "Trace a Java program from source file to output. Say which part is compiling, which part is interpreting, and where a JIT compiler fits.",
+      "hint": "There are two commands, and the second one starts a program that is not your program.",
+      "solution": "javac compiles Hello.java into Hello.class, which holds bytecode. That step is compilation. Running java Hello starts the JVM, which interprets the bytecode together with the program's input to produce output. That step is interpretation. A JIT compiler runs inside the JVM and translates bytecode into machine code immediately before it runs, usually for the parts that run often.",
+      "explanation": "Java is compiled and interpreted, not one or the other. The compile step gives portability, because the class file is not tied to one processor. The JIT step wins back speed that plain interpretation loses. Neither step removes the need for the JVM.",
+      "difficulty": "medium",
+      "tags": ["java", "hybrid", "jit"],
+      "exams": ["university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "what-compiler-does",
+      "type": "mcq",
+      "prompt": "Which statement best describes a compiler?",
+      "options": [
+        "It carries out a source program's operations directly on the user's input",
+        "It translates a source program into an equivalent target program, without running it",
+        "It combines object files and libraries into one executable",
+        "It copies an executable into memory and starts it"
+      ],
+      "answer": 1,
+      "hint": "What comes out of a compiler: output from the program, or something else?",
+      "solution": "It translates a source program into an equivalent target program, without running it.",
+      "explanation": "The first option describes an interpreter, which is the usual confusion: a compiler stops once translation is finished. The third describes a linker and the fourth a loader, both of which work on code that has already been translated.",
+      "difficulty": "easy",
+      "tags": ["definitions"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "one-advantage-each",
+      "type": "mcq",
+      "prompt": "Which pair gives the usual main advantage of each approach?",
+      "options": [
+        "Compiler: faster execution. Interpreter: better error diagnostics at run time.",
+        "Compiler: better error diagnostics at run time. Interpreter: faster execution.",
+        "Compiler: no need to translate for each kind of machine. Interpreter: faster execution.",
+        "Compiler: output runs on any processor. Interpreter: no extra program is needed at run time."
+      ],
+      "answer": 0,
+      "hint": "Think about how often each approach has to analyze a statement in a loop.",
+      "solution": "Compiler: faster execution. Interpreter: better error diagnostics at run time.",
+      "explanation": "A compiled program does not repeat analysis at run time, so it is usually much faster, and an interpreter works statement by statement, so it knows exactly where a run-time error happened. The second option swaps them. The others get portability backwards: machine code is tied to a processor, and an interpreter must be present at run time.",
+      "difficulty": "easy",
+      "tags": ["trade-offs"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "assembler-output",
+      "type": "mcq",
+      "prompt": "What does an assembler normally produce?",
+      "options": [
+        "Assembly language",
+        "Bytecode for a virtual machine",
+        "Relocatable machine code",
+        "An executable with every address already final"
+      ],
+      "answer": 2,
+      "hint": "Is the assembler the last step before a program can run?",
+      "solution": "Relocatable machine code.",
+      "explanation": "Assembly language is the assembler's input, not its output. Bytecode comes from compilers such as javac. Addresses are not final yet, because the code may still be linked with other object files and libraries, which is the linker's job.",
+      "difficulty": "easy",
+      "tags": ["assembler"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "who-resolves-reference",
+      "type": "mcq",
+      "prompt": "Code in a.c calls a function defined in b.c. The two files are compiled separately and combined into one executable. Which program connects the call to the function's address?",
+      "options": ["The compiler", "The assembler", "The linker", "The loader"],
+      "answer": 2,
+      "hint": "Which of these programs is the first to see both files together?",
+      "solution": "The linker.",
+      "explanation": "The compiler and the assembler each work on one file at a time, so while handling a.c neither can know where the function ends up. They leave the reference unresolved for the linker. The loader acts later, when the finished executable is launched, and by then this reference between two files has been dealt with.",
+      "difficulty": "easy",
+      "tags": ["linker"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "why-bytecode",
+      "type": "mcq",
+      "prompt": "What is the main benefit of compiling Java to bytecode instead of directly to one processor's machine code?",
+      "options": [
+        "Interpreted bytecode runs faster than machine code",
+        "The same class file can run on any machine that has a JVM",
+        "No program other than the class file is needed at run time",
+        "Every possible error is found at compile time"
+      ],
+      "answer": 1,
+      "hint": "Ask what stays the same when the program moves to different hardware.",
+      "solution": "The same class file can run on any machine that has a JVM.",
+      "explanation": "Portability is the benefit. Interpreted bytecode is usually slower than machine code, which is why JIT compilers exist. A JVM is needed at run time, so the class file is not enough by itself. Some errors, such as an array index out of range at run time, cannot be found by compiling.",
+      "difficulty": "easy",
+      "tags": ["java", "hybrid"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "what-jit-does",
+      "type": "mcq",
+      "prompt": "What does a just-in-time compiler do?",
+      "options": [
+        "Translates Java source into bytecode before the program ships",
+        "Decodes and runs bytecode one instruction at a time",
+        "Translates bytecode into machine code immediately before it runs",
+        "Links class files into one executable ahead of time"
+      ],
+      "answer": 2,
+      "hint": "The name tells you when it works: while the program is running.",
+      "solution": "Translates bytecode into machine code immediately before it runs.",
+      "explanation": "The first option describes javac, which runs long before the program does. The second describes a plain interpreter, which is what a JIT compiler is added to replace for frequently run code. Nothing in the JIT's job is about linking files into an executable.",
+      "difficulty": "easy",
+      "tags": ["jit"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "false-statement",
+      "type": "mcq",
+      "prompt": "Which statement is FALSE?",
+      "options": [
+        "An interpreted program needs its interpreter every time it runs",
+        "A compiler's target language must be machine code",
+        "A compiler can translate one high-level language into another",
+        "An assembler is itself a kind of translator"
+      ],
+      "answer": 1,
+      "hint": "Look for the one that adds a restriction the definition does not contain.",
+      "solution": "A compiler's target language must be machine code.",
+      "explanation": "The target can be any language, including assembly, bytecode or C. The other three are true: an interpreter is not optional at run time, source-to-source compilers exist, and an assembler translates assembly language into machine code even though the job is simple.",
+      "difficulty": "medium",
+      "tags": ["definitions"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "rare-branch-error",
+      "type": "mcq",
+      "prompt": "A program in a statically typed language has a type error inside a branch that almost never runs. Compare a compiler with an interpreter that checks each statement only as it reaches it. What usually happens?",
+      "options": [
+        "Both report the error before the program starts",
+        "The compiler reports it before the program runs. The interpreter reports it only if that branch is reached.",
+        "The compiler reports it only if that branch is reached. The interpreter reports it before the program starts.",
+        "Neither can report it, because type errors depend on the input"
+      ],
+      "answer": 1,
+      "hint": "How much of the program has each one looked at before anything runs?",
+      "solution": "The compiler reports it before the program runs. The interpreter reports it only if that branch is reached.",
+      "explanation": "A compiler analyzes the whole program, reached or not, so it sees the error up front. This interpreter only looks at statements as they execute, so it stays silent on runs that skip the branch. The first and third options give the interpreter a view of the whole program that this one does not have. A static type error does not depend on the input, which rules out the last option.",
+      "difficulty": "medium",
+      "tags": ["errors", "trade-offs"],
+      "exams": ["university"]
+    },
+    {
+      "id": "explain-difference",
+      "type": "short",
+      "prompt": "Explain the difference between a compiler and an interpreter. Use one example of when you would prefer each.",
+      "hint": "Start from what each one produces, then link that to speed and to the edit-and-run cycle.",
+      "solution": "A compiler translates the whole source program into an equivalent target program, which can then run many times with no compiler present. An interpreter produces no target program. It takes the source and the input together and carries out the operations directly, so it must be present on every run.\n\nPrefer a compiler for a long-running or performance-critical program, such as a game engine. Prefer an interpreter for a short script you change often, where starting at once and getting clear run-time errors matter more than speed.",
+      "explanation": "The defining difference is whether a separate target program comes out. Speed, diagnostics and portability all follow from that. A good answer does not stop at 'line by line' versus 'whole program', and it mentions that real systems such as Java combine the two.",
+      "difficulty": "easy",
+      "tags": ["definitions", "trade-offs"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does a compiler take in, and what does it produce?",
+      "back": "It takes a source program and produces an equivalent target program, reporting any errors it finds. It does not run the program.",
+      "tags": ["compiler"]
+    },
+    {
+      "front": "What is the defining difference between an interpreter and a compiler?",
+      "back": "An interpreter produces no separate target program. It takes the source and the input together and appears to carry out the operations directly.",
+      "tags": ["interpreter"]
+    },
+    {
+      "front": "What does an assembler produce?",
+      "back": "Relocatable machine code, whose addresses are not final yet.",
+      "tags": ["assembler"]
+    },
+    {
+      "front": "What is the difference between a linker and a loader?",
+      "back": "A linker combines relocatable code and libraries into an executable, resolving references between them. A loader puts the executable in memory and starts it.",
+      "tags": ["linker", "loader"]
+    },
+    {
+      "front": "What is bytecode?",
+      "back": "Compact instructions for an abstract machine rather than a real processor. In Java, javac produces it and the JVM runs it.",
+      "tags": ["java", "hybrid"]
+    },
+    {
+      "front": "What does a just-in-time compiler do?",
+      "back": "It translates bytecode into machine code immediately before that code runs, usually for the parts that run often.",
+      "tags": ["jit"]
+    }
+  ]
+}

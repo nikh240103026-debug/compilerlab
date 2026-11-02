@@ -1,0 +1,260 @@
+{
+  "summary": [
+    "Compiler-construction tools generate compiler components from a description written in a small specialized language.",
+    "The Dragon Book lists six kinds: scanner generators, parser generators, syntax-directed translation engines, code-generator generators, data-flow analysis engines, and compiler-construction toolkits.",
+    "Lex and Flex read regular expressions and actions and write a scanner in C, choosing the longest match and breaking ties by rule order.",
+    "Yacc and Bison read a grammar and actions and write an LALR parser in C, which calls the scanner each time it needs a token.",
+    "These tools generate only parts of a compiler, so meaning checks and the rest of the translation remain for you or for other tools."
+  ],
+  "practice": [
+    {
+      "id": "map-tools-to-phases",
+      "type": "short",
+      "prompt": "Which compiler phase does each tool help to build?\n\n(a) Scanner generator\n(b) Parser generator\n(c) Syntax-directed translation engine\n(d) Code-generator generator\n(e) Data-flow analysis engine",
+      "hint": "Most of the names say what they make. For the data-flow engine, think about what its facts are used for.",
+      "solution": "(a) Lexical analysis\n(b) Syntax analysis\n(c) Intermediate code generation\n(d) Code generation\n(e) Code optimization",
+      "explanation": "The easy parts to swap are (c) and (d). A syntax-directed translation engine walks a parse tree and generates intermediate code, while a code-generator generator goes from intermediate code to machine language. The sixth kind, a toolkit, is left out because it supports several phases.",
+      "difficulty": "easy",
+      "tags": ["tools", "phases"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "regex-integer-literal",
+      "type": "regex",
+      "prompt": "Write the pattern for an integer literal to give a scanner generator. It has one or more digits and no leading zeros, except that the number 0 itself is allowed.",
+      "reference": "0|[1-9][0-9]*",
+      "accepts": ["0", "7", "10", "905"],
+      "rejects": ["", "00", "007", "a1"],
+      "hint": "Treat the number 0 as a case of its own. What can the first digit of any other number be?",
+      "solution": "0|[1-9][0-9]*",
+      "explanation": "The first alternative handles 0. The second requires a nonzero first digit, then any number of further digits, which is what rules out 007. The simpler pattern [0-9]+ would accept leading zeros, and [1-9][0-9]* alone would reject 0.",
+      "difficulty": "medium",
+      "tags": ["regex", "scanner-generators"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "rule-order-fix",
+      "type": "short",
+      "prompt": "A scanner has these rules, in this order:\n\nID [a-z]+\nIF if\n\n(a) What token does the input if produce, and why?\n(b) How do you fix the rules so that if is a keyword?\n(c) After the fix, what does the input iffy produce, and why?",
+      "hint": "Apply the two rules in turn: first the length of the match, then the order of the rules.",
+      "solution": "(a) ID. Both patterns match if with the same length, so the rule listed first wins, and the IF rule can never match.\n(b) List IF above ID.\n(c) One ID token. IF matches only the first two characters, while ID matches all four, and the longest match wins before rule order is even considered.",
+      "explanation": "Rule order settles only ties in length, so the fix does not stop iffy from being an identifier. That is exactly what you want, since otherwise identifiers such as iffy would be split into a keyword and a leftover. You can confirm all of this in the visualizer.",
+      "difficulty": "medium",
+      "tags": ["lex", "longest-match", "rule-order"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "generated-files",
+      "type": "mcq",
+      "prompt": "You run bison -d parser.y and flex scanner.l. Which generated file must scanner.l include so that the scanner knows the token names?",
+      "options": ["lex.yy.c", "parser.tab.c", "parser.tab.h", "scanner.tab.h"],
+      "answer": 2,
+      "hint": "The parser generator decides the token numbers, and the -d flag asks for an extra file. What kind of file do C programs include?",
+      "solution": "parser.tab.h",
+      "explanation": "Bison writes the token definitions and the declaration of yylval to the header because of the -d flag. lex.yy.c is the scanner itself, the output of Flex, so it cannot be the input it needs. parser.tab.c holds the parser code and is compiled separately, not included. Nothing produces scanner.tab.h, since Bison names its output after the grammar file.",
+      "difficulty": "medium",
+      "tags": ["bison", "flex"],
+      "exams": ["university"]
+    },
+    {
+      "id": "precedence-swap",
+      "type": "short",
+      "prompt": "In the calculator grammar, suppose the declarations were swapped so that %left '*' comes first and %left '+' comes second. What would the program print for 2 + 3 * 4, and why?",
+      "hint": "Which line gives an operator higher precedence: an earlier one or a later one?",
+      "solution": "20. An operator on a later line has higher precedence, so + now binds tighter than *. The input is grouped as (2 + 3) * 4, which is 5 * 4.",
+      "explanation": "The usual wrong answer is 14, from assuming that * always binds tighter. In Yacc and Bison, nothing is built in: the grammar is ambiguous, and precedence comes only from the order of these declarations. The scanner produces the same tokens either way, so the change affects only the parser.",
+      "difficulty": "hard",
+      "tags": ["yacc", "precedence"],
+      "exams": ["university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "scanner-generator-input",
+      "type": "mcq",
+      "prompt": "What does a scanner generator take as its description of the language?",
+      "options": [
+        "A context-free grammar",
+        "Regular expressions for the tokens",
+        "Rules for each intermediate-language operation",
+        "A stream of tokens"
+      ],
+      "answer": 1,
+      "hint": "Tokens have simple patterns, with no nesting to keep track of.",
+      "solution": "Regular expressions for the tokens.",
+      "explanation": "A context-free grammar is what a parser generator takes. Rules for intermediate-language operations go to a code-generator generator. A stream of tokens is what the generated scanner eventually produces, not what the generator reads.",
+      "difficulty": "easy",
+      "tags": ["scanner-generators"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "parser-generator-output",
+      "type": "mcq",
+      "prompt": "What does a parser generator produce?",
+      "options": [
+        "A lexical analyzer, from regular expressions",
+        "A syntax analyzer, from a grammatical description of the language",
+        "A code generator, from rules for each intermediate-language operation",
+        "Data-flow facts about how values move through a program"
+      ],
+      "answer": 1,
+      "hint": "A parser is another name for which phase of the compiler?",
+      "solution": "A syntax analyzer, from a grammatical description of the language.",
+      "explanation": "Each wrong option is the job of a different tool: a scanner generator, a code-generator generator and a data-flow analysis engine. Keeping these inputs and outputs straight is most of what questions on this topic ask for.",
+      "difficulty": "easy",
+      "tags": ["parser-generators"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "flex-output",
+      "type": "mcq",
+      "prompt": "What does Flex write when you run it on a specification file?",
+      "options": [
+        "The list of tokens in your program",
+        "A ready-to-run executable",
+        "A C source file containing a scanner function",
+        "A grammar for the parser to read"
+      ],
+      "answer": 2,
+      "hint": "Flex runs before the C compiler does. What would the C compiler need from it?",
+      "solution": "A C source file containing a scanner function.",
+      "explanation": "It writes lex.yy.c, which contains yylex. The tokens only appear later, when the compiled scanner runs on a program, so the first option confuses the two steps. You still have to compile the C file to get an executable. Flex has nothing to do with writing grammars.",
+      "difficulty": "easy",
+      "tags": ["flex"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "yacc-parser-kind",
+      "type": "mcq",
+      "prompt": "What kind of parser does Yacc build?",
+      "options": [
+        "A recursive-descent parser",
+        "An LL(1) table-driven parser",
+        "An operator-precedence parser",
+        "An LALR parser"
+      ],
+      "answer": 3,
+      "hint": "Yacc builds the parse tree from the leaves upward, and it is not limited to expressions.",
+      "solution": "An LALR parser.",
+      "explanation": "Recursive descent and LL(1) are top-down methods, which is the wrong direction. The %left and %right declarations can make operator precedence look like the answer, but they only resolve conflicts in the LALR table, and the method itself handles far more than expressions.",
+      "difficulty": "easy",
+      "tags": ["yacc", "lalr"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "tool-for-optimizer",
+      "type": "mcq",
+      "prompt": "Which tool most directly supports the code optimization phase?",
+      "options": [
+        "A scanner generator",
+        "A parser generator",
+        "A syntax-directed translation engine",
+        "A data-flow analysis engine"
+      ],
+      "answer": 3,
+      "hint": "An optimizer must be sure that a change is safe. Which tool helps it find out what it needs to know?",
+      "solution": "A data-flow analysis engine.",
+      "explanation": "Data-flow analysis tells the optimizer which transformations are safe. The first two tools build front-end phases. A syntax-directed translation engine generates the intermediate code, which is what the optimizer later works on, so it comes before optimization rather than supporting it.",
+      "difficulty": "easy",
+      "tags": ["data-flow"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "name-the-generator",
+      "type": "mcq",
+      "prompt": "A tool takes a collection of rules saying how each operation of the intermediate language maps to machine language for a target machine. What is it?",
+      "options": [
+        "A syntax-directed translation engine",
+        "A code-generator generator",
+        "A data-flow analysis engine",
+        "A parser generator"
+      ],
+      "answer": 1,
+      "hint": "Which phase has intermediate code as its input and machine code as its output?",
+      "solution": "A code-generator generator.",
+      "explanation": "The tempting wrong answer is a syntax-directed translation engine, but that produces routines that generate intermediate code from a parse tree, which is one step earlier. A data-flow engine gathers facts and generates no code. A parser generator works from a grammar.",
+      "difficulty": "medium",
+      "tags": ["code-generation"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "rule-order-effect",
+      "type": "mcq",
+      "prompt": "A scanner lists the rule ID [a-z]+ before the rule IF if. What does the input if produce?",
+      "options": [
+        "An IF token, because keywords always take priority",
+        "An ID token, because both patterns match the same length and ID is listed first",
+        "An IF token, because its pattern is shorter",
+        "A scanner error, because two rules match the same text"
+      ],
+      "answer": 1,
+      "hint": "Both patterns match two characters. What breaks the tie?",
+      "solution": "An ID token, because both patterns match the same length and ID is listed first.",
+      "explanation": "A scanner generator has no idea what a keyword is, so nothing makes them special: the rule order is the only tie-breaker. A shorter pattern gets no priority either. Two rules matching the same text is not an error. It is the normal case, and it is why the tie-break exists.",
+      "difficulty": "medium",
+      "tags": ["lex", "rule-order"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "longest-match-effect",
+      "type": "mcq",
+      "prompt": "A scanner lists the rule IF if before the rule ID [a-z]+. What does the input iffy produce?",
+      "options": [
+        "An IF token, then an ID token for fy",
+        "One ID token for iffy",
+        "An IF token, then a scanner error",
+        "One IF token, with the rest ignored"
+      ],
+      "answer": 1,
+      "hint": "Rule order only matters when two matches have the same length. Is that the case here?",
+      "solution": "One ID token for iffy.",
+      "explanation": "ID matches all four characters and IF only matches two, so the longest match wins, and rule order never comes into it. Splitting the word after if is the tempting mistake, and it would make it impossible to name a variable anything that begins with a keyword.",
+      "difficulty": "medium",
+      "tags": ["lex", "longest-match"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "explain-why-generators",
+      "type": "short",
+      "prompt": "Give two benefits of using a scanner or parser generator rather than writing that component by hand, and one reason a compiler team might write its parser by hand anyway.",
+      "hint": "Think about what happens when the language changes, and about who controls the error messages.",
+      "solution": "Benefits:\n1. The description is short and clear, and it is close to how the language is specified.\n2. Changing the language means editing the description and running the tool again, and the generation algorithm handles the difficult details correctly.\n\nReason for hand-writing: it gives finer control, especially over error messages and recovery. GCC and Clang both use hand-written parsers.",
+      "explanation": "A good answer gives reasons rather than just saying 'it is faster'. Generators also report problems with the description itself, such as a rule that can never match, or a conflict in a grammar. Hand-writing is a trade-off, not a sign that generators are bad.",
+      "difficulty": "easy",
+      "tags": ["tools", "design"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Name the six kinds of compiler-construction tools in the Dragon Book's list.",
+      "back": "Parser generators, scanner generators, syntax-directed translation engines, code-generator generators, data-flow analysis engines, and compiler-construction toolkits.",
+      "tags": ["tools"]
+    },
+    {
+      "front": "What do Lex and Flex take in, and what do they write?",
+      "back": "They take patterns and actions, and write a scanner in C (lex.yy.c), with the function yylex.",
+      "tags": ["lex", "flex"]
+    },
+    {
+      "front": "What do Yacc and Bison take in, and what do they write?",
+      "back": "They take a grammar and actions, and write an LALR parser in C, with the function yyparse.",
+      "tags": ["yacc", "bison"]
+    },
+    {
+      "front": "How does a Lex-generated scanner choose between patterns?",
+      "back": "It prefers the longest match. If two patterns match the same longest text, it prefers the one listed first.",
+      "tags": ["lex", "longest-match"]
+    },
+    {
+      "front": "What does a data-flow analysis engine do, and which phase uses it?",
+      "back": "It helps gather information about how values move through a program. Code optimization uses that information.",
+      "tags": ["data-flow"]
+    },
+    {
+      "front": "What does a compiler-construction toolkit provide? Give an example.",
+      "back": "An integrated set of routines for building several phases. LLVM is a well-known example.",
+      "tags": ["toolkits"]
+    }
+  ]
+}

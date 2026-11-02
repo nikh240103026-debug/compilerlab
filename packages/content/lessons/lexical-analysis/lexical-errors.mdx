@@ -1,0 +1,167 @@
+---
+id: lexical-errors
+module: lexical-analysis
+title: Lexical error handling
+order: 8
+estimatedMinutes: 20
+prerequisites:
+  - lexer-design
+outcomes:
+  - Decide whether a given mistake can be detected by the lexer or only by a later phase
+  - Explain panic-mode recovery, with one strength and one risk
+  - Name the four single-character repairs and apply them to broken input
+  - Explain why a lexer keeps going after an error
+visualizers:
+  - id: token-stream
+    label: Token stream
+    props:
+      source: "x = 1 @@# + 2;\ny = 3 ? 4;"
+      rules: |
+        ID     [a-zA-Z_][a-zA-Z0-9_]*  %identifier
+        NUM    [0-9]+                  %literal
+        ASSIGN =                       %operator
+        PLUS   \+                      %operator
+        SEMI   ;                       %punctuation
+        WS     [ \t\n]+                %skip
+---
+
+## Why this matters
+
+Programs have typos, and the lexer is the first phase to see them. If it stopped at the first bad character, you would get one message per compile: fix it, compile again, get the next one. A useful lexer reports the problem, recovers and carries on.
+
+It also helps to know what the lexer cannot do. It only sees characters, so most mistakes in a program are invisible to it, and reporting them falls to later phases.
+
+## What a lexer can and cannot detect
+
+A **lexical error** means the lexer cannot go on because no token pattern matches any prefix of the remaining input. That is the only kind of problem it can see. Any text that matches a pattern is a valid token as far as the lexer knows, however wrong it looks to you.
+
+| Source | What the lexer sees | Who reports the problem |
+| --- | --- | --- |
+| `x = 1 @ 2;` | No pattern can start with `@` | Lexer |
+| `s = "abc` with no closing quote | No pattern matches, if a string must close on its line | Lexer |
+| `fi (a == b) x = 1;` | `fi` is a valid identifier | Parser, because `id ( ... ) id` does not fit the grammar |
+| `x = (1 + 2;` | Every piece is a valid token | Parser, because the parenthesis is not closed |
+| `x = y + 1;` with `y` undeclared | Every piece is a valid token | Semantic analysis |
+
+Look at `fi` closely. It might be a misspelled `if`, or a function named `fi`. The characters alone cannot say which, so the lexer must return `id` and leave the judgment to a later phase.
+
+<TryIt visualizer="token-stream" source="fi (a == b) x = 1;">Scan the misspelled keyword</TryIt>
+
+<Callout kind="note">
+Where the line falls depends on the rules. With a plain `NUM` and `ID`, the input `1x` is not a lexical error: it comes out as `NUM` then `ID`, and the parser has to complain. A lexer that wants to catch this needs an extra rule or check. The same goes for limits such as a number too large to store.
+</Callout>
+
+<TryIt visualizer="token-stream" source="1x = 2;" rules="ID     [a-zA-Z_][a-zA-Z0-9_]*  %identifier
+NUM    [0-9]+                  %literal
+ASSIGN =                       %operator
+SEMI   ;                       %punctuation
+WS     [ \t\n]+                %skip">Scan 1x as two tokens</TryIt>
+
+## Panic-mode recovery
+
+The simplest way to recover is **panic mode**: delete characters from the remaining input, one after another, until a well-formed token can begin. Press play in the visualizer and find the step titled "Lexical error at 1:7".
+
+Panic mode is easy to build, and it always makes progress, so the lexer can never get stuck. Its weakness is that deleting characters can leave something different from what the programmer meant, which may confuse the parser:
+
+- In `pri@ntf = 1;`, deleting `@` does not bring back `printf`. The lexer emits `pri` as soon as it gets stuck on the `@`, and then reads `ntf` as a separate identifier. The parser sees two identifiers in a row and reports an error that says nothing about the real mistake.
+- In `s = "abc;` with no closing quote, the lexer deletes the opening quote, and then reads `abc` as an identifier. The text of the string is now being treated as code.
+
+<TryIt visualizer="token-stream" source='s = "abc;&#10;t = "d";' rules='STR    \"[^"\n]*\"  %literal
+ID     [a-z]+        %identifier
+ASSIGN =             %operator
+SEMI   ;             %punctuation
+WS     [ \t\n]+      %skip'>See a string fall apart</TryIt>
+
+You can do better by writing a rule for the mistake itself. Add a pattern for a string with no closing quote, and the lexer can report exactly that, in one piece. Since a closed string is a longer match, it still takes the proper rule.
+
+<TryIt visualizer="token-stream" source='s = "abc;&#10;t = "d";' rules='STR    \"[^"\n]*\"  %literal
+BADSTR \"[^"\n]*
+ID     [a-z]+        %identifier
+ASSIGN =             %operator
+SEMI   ;             %punctuation
+WS     [ \t\n]+      %skip'>Add a rule for the mistake</TryIt>
+
+## Four single-character repairs
+
+Instead of only deleting, a lexer can try to repair the input. There are four single-character transformations:
+
+1. **Delete** one character.
+2. **Insert** a missing character.
+3. **Replace** one character with another.
+4. **Transpose** two adjacent characters, meaning swap them.
+
+Suppose a language has `:=` as its assignment operator, and neither `:` nor `=` is a token by itself. Each of these lines is one repair away from `x := 1`:
+
+| Broken input | Repair | What it does |
+| --- | --- | --- |
+| `x :@= 1` | Delete | Remove the `@` |
+| `x : 1` | Insert | Add `=` after the `:` |
+| `x :- 1` | Replace | Change `-` to `=` |
+| `x =: 1` | Transpose | Swap `=` and `:` |
+
+The simplest strategy is to check whether a prefix of the remaining input can become a valid lexeme through one such transformation. This is reasonable because most lexical errors in practice involve a single character. A more ambitious strategy finds the smallest number of transformations that would make the whole program consist of valid lexemes, but that is considered too expensive to be worth it.
+
+A repair is a guess. In `x : 1`, deleting the `:` would also leave valid tokens, and the characters do not say which fix was meant. So a compiler that repairs the input should still report the error, and should not treat the program as correct.
+
+This tool uses panic mode only and does not try repairs. Try any of those broken lines and panic mode deletes `:@=`, `:`, `:-` or `=:`, leaving `x` and `1` for the parser to puzzle over.
+
+<TryIt visualizer="token-stream" source="x =: 1" rules="ID     [a-z]+    %identifier
+NUM    [0-9]+    %literal
+ASSIGN :=        %operator
+WS     [ \t\n]+  %skip">Scan x =: 1</TryIt>
+
+## Keeping going
+
+After recovering, the lexer continues to the end of the input. Compiling and fixing one error at a time is slow, so a single run should report as many real errors as it can, each with its line and column. The compile has already failed by this point, and the aim is only to find more errors.
+
+The risk is noise: one mistake producing a flood of messages. Two habits help. Grouping adjacent bad characters avoids printing the same complaint three times in a row, and real compilers often stop after a set number of errors.
+
+<Callout kind="textbook">
+Grouping adjacent bad characters into one error is a choice this tool makes. The book describes deleting successive characters until a token can begin, and it does not say how many messages that should produce. Real compilers vary. The `:=` examples above are written for this lesson, and the book lists the four transformations without them.
+</Callout>
+
+## Worked example
+
+The visualizer has these two lines loaded, with rules for identifiers, numbers, `=`, `+`, `;` and whitespace:
+
+```text
+x = 1 @@# + 2;
+y = 3 ? 4;
+```
+
+The scan goes like this:
+
+| Position | Text | Result |
+| --- | --- | --- |
+| 1:1 | `x` | `ID` |
+| 1:3 | `=` | `ASSIGN` |
+| 1:5 | `1` | `NUM` |
+| 1:7 | `@@#` | One error: no rule matches `@@#` |
+| 1:11 | `+` | `PLUS` |
+| 1:13 | `2` | `NUM` |
+| 1:14 | `;` | `SEMI` |
+| 2:1 | `y` | `ID` |
+| 2:3 | `=` | `ASSIGN` |
+| 2:5 | `3` | `NUM` |
+| 2:7 | `?` | One error: no rule matches `?` |
+| 2:9 | `4` | `NUM` |
+| 2:10 | `;` | `SEMI` |
+
+That makes 11 tokens and 2 errors. Here is what happens at each error:
+
+1. At 1:7, the DFA's start state has no move on `@`. No rule has matched, so this is a lexical error. The lexer deletes the `@` and restarts at the next character.
+2. The next `@` and the `#` fail in the same way. They are right next to the first error, so they join it instead of adding new ones.
+3. The space after `#` matches `WS`, so recovery is over and the scan continues.
+4. At 2:7, the `?` fails. It is not next to the previous error, so it gets its own error.
+
+Panic mode worked differently on the two lines. Line 1 becomes `x = 1 + 2;`, which is probably what was meant. Line 2 becomes `y = 3 4;`, and the parser will complain about the missing operator, even though the programmer probably wrote `?` in place of one. That is the risk of panic mode: the lexer can keep going, but it cannot know what the text was meant to be.
+
+## Common mistakes
+
+- **Calling a misspelled keyword a lexical error.** `whlie` is a valid identifier. The lexer returns `id`, and a later phase reports the problem.
+- **Thinking a lexical error ends the scan.** The lexer records it, recovers and continues. The compile fails, but scanning does not stop.
+- **Confusing the two panic modes.** The parser has a panic mode too, which you will meet in syntax analysis. The lexer's deletes characters, and the parser's discards tokens until it finds one it can use to resynchronize.
+- **Counting one error per bad character.** In this tool, `@#$` is one error. `@ # $` is three, because the spaces between them match `WS` and end each run.
+- **Assuming that deleting a character rejoins a word.** `pri@ntf` gives two identifiers, not `printf`.
+- **Treating a repair as a success.** A repaired program still has an error in it, and the compiler should say so.
+- **Assuming every lexer classifies mistakes the same way.** Whether `1x` or an unclosed string is a lexical error depends on the rules the lexer was given.

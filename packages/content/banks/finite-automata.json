@@ -1,0 +1,268 @@
+{
+  "summary": [
+    "A finite automaton is a recognizer: it reads a string and answers yes or no. It can be drawn as a transition graph or written as a transition table.",
+    "A DFA has no ε-moves and exactly one edge for each state and symbol. An NFA may have several edges or none for a symbol, and may have ε-moves, and it accepts a string if at least one path to an accepting state spells that string.",
+    "ε-closure(s) is the set of states reachable from s on ε-moves alone, including s. An NFA can be simulated by tracking a set of states: S = ε-closure(move(S, c)) for each input symbol c.",
+    "Regular expressions, NFAs, ε-NFAs and DFAs all describe exactly the regular languages, so nondeterminism adds no power.",
+    "A DFA is fast, with one table lookup per symbol, but can need exponentially many states. An NFA is small but slower to run. Lexers use DFAs because they are built once and run on a lot of input."
+  ],
+  "practice": [
+    {
+      "id": "regex-from-dfa",
+      "type": "regex",
+      "prompt": "This DFA is over the alphabet {a, b}. State 0 is the start state, and state 1 is the only accepting state.\n\nState 0: on a go to 1, on b go to 0\nState 1: on a go to 1, on b go to 0\n\nWrite a regular expression for the language it accepts.",
+      "reference": "(a|b)*a",
+      "accepts": ["a", "aa", "ba", "bba", "aba"],
+      "rejects": ["", "b", "ab", "aab"],
+      "hint": "Both states behave the same way, so the next state depends only on the symbol just read. What does being in state 1 tell you about that symbol?",
+      "solution": "(a|b)*a",
+      "explanation": "Every a leads to state 1, and every b leads to state 0, so the machine is in state 1 exactly when the last symbol read was a. The language is all strings that end in a. The answer a* is a common slip: it misses ba and wrongly includes the empty string.",
+      "difficulty": "easy",
+      "tags": ["dfa", "regex"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "regex-from-enfa",
+      "type": "regex",
+      "prompt": "This ε-NFA is over the alphabet {a, b}. State 0 is the start state, and states 1 and 2 are accepting.\n\nState 0: on ε go to 1, on ε go to 2\nState 1: on a go to 1\nState 2: on b go to 2\n\nWrite a regular expression for the language it accepts.",
+      "reference": "a*|b*",
+      "accepts": ["", "a", "aaa", "b", "bb"],
+      "rejects": ["ab", "ba", "aab"],
+      "hint": "Follow each ε-move separately. Once the machine has taken one, can it ever reach the other branch?",
+      "solution": "a*|b*",
+      "explanation": "Before reading anything, the machine can be in state 1 or state 2, and there is no way between them. So a string must be all a's or all b's, and the empty string is accepted, since both states are accepting. The tempting answer (a|b)* is too broad, because the machine cannot mix the two symbols. The answer a*b* is wrong for the same reason: it accepts ab.",
+      "difficulty": "medium",
+      "tags": ["epsilon-nfa", "regex"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "compute-closure",
+      "type": "mcq",
+      "prompt": "An ε-NFA has these ε-edges:\n\n0→1, 0→5, 1→2, 1→4, 3→2, 3→4, 4→7, 6→7\n\nIt also has an edge from 2 to 3 on a, and an edge from 5 to 6 on b.\n\nWhat is ε-closure(0)?",
+      "options": ["{0, 1, 5}", "{1, 2, 4, 5, 7}", "{0, 1, 2, 4, 5, 7}", "{0, 1, 2, 3, 4, 5, 6, 7}"],
+      "answer": 2,
+      "hint": "Start from {0} and keep following ε-edges until nothing new appears. Look carefully at which edges read a symbol.",
+      "solution": "{0, 1, 2, 4, 5, 7}",
+      "explanation": "From 0, reach 1 and 5. From 1, reach 2 and 4. From 4, reach 7. Nothing new follows. {0, 1, 5} stops after one step. {1, 2, 4, 5, 7} leaves out state 0, which is always in its own closure. The last option crosses the a and b edges to reach 3 and 6, but a closure uses ε-edges only.",
+      "difficulty": "medium",
+      "tags": ["epsilon-closure"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "trace-nfa-sets",
+      "type": "mcq",
+      "prompt": "This NFA has start state 0 and accepting state 3, and no ε-moves.\n\nState 0: on a go to {0, 1}, on b go to {0}\nState 1: on b go to {2}\nState 2: on b go to {3}\n\nWhich set of states is it in after reading abab, and what is the result?",
+      "options": ["{2}, rejected", "{0, 1}, rejected", "{0, 2}, rejected", "{0, 3}, accepted"],
+      "answer": 2,
+      "hint": "Track the set after each symbol, starting from {0}. Apply the moves to every state in the set.",
+      "solution": "{0, 2}, rejected.",
+      "explanation": "The sets are {0}, then {0, 1}, {0, 2}, {0, 1}, {0, 2}. State 3 is not in the final set, so the string is rejected. {2} comes from following only one path and forgetting that state 0 stays active. {0, 1} is the set after aba, one symbol too early. {0, 3} would need the string to end in abb.",
+      "difficulty": "medium",
+      "tags": ["nfa", "simulation"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "trace-dfa",
+      "type": "short",
+      "prompt": "This DFA has start state q0 and accepting state q3.\n\nq0: on a go to q1, on b go to q0\nq1: on a go to q1, on b go to q2\nq2: on a go to q1, on b go to q3\nq3: on a go to q1, on b go to q0\n\nWrite the sequence of states on the input abbab, and say whether the string is accepted.",
+      "hint": "Follow one edge per symbol, and look only at the last state when you decide.",
+      "solution": "q0, q1, q2, q3, q1, q2. The last state, q2, is not accepting, so the string is rejected.",
+      "explanation": "The machine passes through the accepting state q3 after abb, but that does not matter, because acceptance depends only on the state after the whole input. You can check this by typing abbab into the builder with the Ends in abb machine loaded.",
+      "difficulty": "easy",
+      "tags": ["dfa", "simulation"],
+      "exams": ["university"]
+    },
+    {
+      "id": "nth-from-end",
+      "type": "mcq",
+      "prompt": "What is the minimum number of states in a DFA that accepts the strings over {a, b} whose 4th symbol from the right is a?",
+      "options": ["5", "8", "16", "32"],
+      "answer": 2,
+      "hint": "The machine cannot know which symbol will turn out to be 4th from the end. What must it remember as it reads?",
+      "solution": "16",
+      "explanation": "The DFA must remember the last 4 symbols, and each has 2 possible values, so it needs 2^4 = 16 states. The engine's minimal DFA has exactly 16. The answer 5 is the size of the simple NFA for this language, not of the DFA. 8 is the result for the 3rd symbol from the right. 32 is the upper bound from applying the subset construction to the 5-state NFA, which is not reached here.",
+      "difficulty": "hard",
+      "tags": ["dfa", "state-count"],
+      "exams": ["GATE"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "dfa-rules",
+      "type": "mcq",
+      "prompt": "Which two rules make a finite automaton a DFA, according to the Dragon Book?",
+      "options": [
+        "No cycles, and exactly one accepting state",
+        "No ε-moves, and exactly one accepting state",
+        "No ε-moves, and exactly one edge out of each state for each input symbol",
+        "Exactly one edge out of each state, whatever its label"
+      ],
+      "answer": 2,
+      "hint": "Determinism means that the machine never has a choice about what to do next.",
+      "solution": "No ε-moves, and exactly one edge out of each state for each input symbol.",
+      "explanation": "These rules remove every choice. A DFA can have cycles, as any machine for an infinite language must, and it can have several accepting states. The last option is too strict: a state has one edge per symbol, not one edge in total.",
+      "difficulty": "easy",
+      "tags": ["dfa", "definitions"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "nfa-acceptance",
+      "type": "mcq",
+      "prompt": "When does an NFA accept a string x?",
+      "options": [
+        "When at least one path from the start state to an accepting state spells x",
+        "When every path that spells x ends in an accepting state",
+        "When exactly one path from the start state to an accepting state spells x",
+        "When the first path it tries ends in an accepting state"
+      ],
+      "answer": 0,
+      "hint": "Do paths that fail affect the result?",
+      "solution": "When at least one path from the start state to an accepting state spells x.",
+      "explanation": "One accepting path is enough, and failed paths do not matter. Requiring every path to succeed would reject aabb on the usual NFA for (a|b)*abb, since one path stays in the start state. Several accepting paths are also fine, so \"exactly one\" is wrong. An NFA has no first path to try: the definition only asks whether a good path exists.",
+      "difficulty": "easy",
+      "tags": ["nfa", "definitions"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "closure-contains-self",
+      "type": "mcq",
+      "prompt": "Which statement about ε-closure(s) is always true?",
+      "options": [
+        "It is empty if s has no ε-moves",
+        "It contains every state reachable from s on any input",
+        "It contains s",
+        "It contains only accepting states"
+      ],
+      "answer": 2,
+      "hint": "How many ε-moves does it take to get from s to s?",
+      "solution": "It contains s.",
+      "explanation": "s is reachable from itself using zero ε-moves. So if s has no ε-moves, its closure is {s}, not the empty set. The second option describes reachability in general, but a closure may follow only ε-edges. Accepting states play no part in the definition.",
+      "difficulty": "easy",
+      "tags": ["epsilon-closure"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "same-power",
+      "type": "mcq",
+      "prompt": "Which statement about the languages these machines recognize is true?",
+      "options": [
+        "NFAs recognize more languages than DFAs, because they can have several moves on a symbol",
+        "ε-NFAs recognize more languages than NFAs without ε-moves",
+        "DFAs recognize more languages than NFAs, because they never get stuck on a choice",
+        "DFAs, NFAs and ε-NFAs all recognize exactly the regular languages"
+      ],
+      "answer": 3,
+      "hint": "Think about what the subset construction shows.",
+      "solution": "DFAs, NFAs and ε-NFAs all recognize exactly the regular languages.",
+      "explanation": "Any NFA, with or without ε-moves, can be converted to a DFA for the same language, so no kind is more powerful. Extra moves and ε-edges can make a machine smaller, which is why the first two options are tempting, but they do not add any language. The third fails because every DFA is already an NFA.",
+      "difficulty": "easy",
+      "tags": ["equivalence"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "subset-bound",
+      "type": "mcq",
+      "prompt": "An NFA has 5 states. What is the largest number of states that the DFA built from it by the subset construction can have?",
+      "options": ["5", "10", "25", "32"],
+      "answer": 3,
+      "hint": "Each DFA state stands for a set of NFA states. How many sets are there?",
+      "solution": "32",
+      "explanation": "A set of 5 states has 2^5 = 32 subsets, and each DFA state corresponds to one subset. This is an upper bound, and many machines need far fewer. 5 is the number of NFA states, and a DFA can need more. 10 is 2 × 5, and 25 is 5^2, both common confusions with 2^5.",
+      "difficulty": "easy",
+      "tags": ["state-count", "subset-construction"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "complete-dfa-ab",
+      "type": "mcq",
+      "prompt": "How many states does the smallest complete DFA have for the language {ab}, over the alphabet {a, b}? In a complete DFA, every state has exactly one move on each symbol.",
+      "options": ["2", "3", "4", "5"],
+      "answer": 2,
+      "hint": "Count the states on the path that accepts ab. Then ask where the machine goes on a wrong symbol.",
+      "solution": "4",
+      "explanation": "Three states track the progress: nothing read, a read, and ab read. A fourth, dead state catches every wrong symbol, because all moves must exist. The tempting answer 3 is what you get if you leave out the dead state, as the diagrams on this site do. 2 is too few, since the three stages of progress must all be told apart.",
+      "difficulty": "medium",
+      "tags": ["dfa", "state-count", "dead-state"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "time-per-string",
+      "type": "mcq",
+      "prompt": "A machine for a regular expression r is run on an input string x. How does the running time of a DFA that has already been built compare with that of a simulated NFA?",
+      "options": [
+        "The DFA takes O(|x|) time, and the NFA takes O(|r| |x|) time",
+        "The DFA takes O(|r| |x|) time, and the NFA takes O(|x|) time",
+        "Both take O(|x|) time",
+        "Both take O(|r| |x|) time"
+      ],
+      "answer": 0,
+      "hint": "Think about how much work one input symbol causes in each. How large is the set an NFA may have to update?",
+      "solution": "The DFA takes O(|x|) time, and the NFA takes O(|r| |x|) time.",
+      "explanation": "A DFA does one table lookup per symbol, however large r is. An NFA may have to update a set of states whose size depends on r, for each symbol. The DFA's cost lies elsewhere: it can take much more time and space to build. The second option swaps the two, and the last two ignore the difference.",
+      "difficulty": "medium",
+      "tags": ["complexity"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "why-lexers-use-dfa",
+      "type": "mcq",
+      "prompt": "Why do lexer generators usually produce a DFA, not an NFA simulation?",
+      "options": [
+        "A DFA recognizes more languages than an NFA",
+        "An NFA cannot follow the longest-match rule",
+        "A DFA is always smaller than the equivalent NFA",
+        "A lexer is generated once and then runs on a lot of input, so fast scanning is worth the build cost"
+      ],
+      "answer": 3,
+      "hint": "Compare how often the lexer is built with how many characters it reads.",
+      "solution": "A lexer is generated once and then runs on a lot of input, so fast scanning is worth the build cost.",
+      "explanation": "This is the space-time trade-off in practice. DFAs and NFAs recognize the same languages, so the first option is false. An NFA simulation can also find the longest match, by remembering the last time its set of states contained an accepting state. A DFA can be far larger than the NFA, not smaller.",
+      "difficulty": "medium",
+      "tags": ["trade-off"],
+      "exams": ["university"]
+    },
+    {
+      "id": "nfa-vs-dfa",
+      "type": "short",
+      "prompt": "List the main differences between an NFA and a DFA. Cover their moves, how they accept a string, their speed and size, and the languages they recognize.",
+      "hint": "Compare them under each of the four headings in the question. One of the four is not a difference at all.",
+      "solution": "Moves: a DFA has exactly one edge for each state and symbol and no ε-moves. An NFA may have several edges or none for a symbol, and may have ε-moves.\nAcceptance: a DFA has one path for each string, and it accepts if that path ends in an accepting state. An NFA accepts if at least one path reaches an accepting state.\nSpeed and size: a DFA takes one table lookup per symbol, but can have exponentially more states. An NFA is usually smaller, but each symbol may touch many states, so it runs more slowly.\nLanguages: there is no difference. Both recognize exactly the regular languages.",
+      "explanation": "Students often leave out the last point, or get it wrong by calling NFAs more powerful. A good answer says that nondeterminism changes the cost but not the set of languages.",
+      "difficulty": "easy",
+      "tags": ["nfa", "dfa"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What are the five parts of a finite automaton?",
+      "back": "A finite set of states, an input alphabet, a transition function, a start state, and a set of accepting states.",
+      "tags": ["definitions"]
+    },
+    {
+      "front": "What two rules make an NFA a DFA?",
+      "back": "No moves on ε, and exactly one edge out of each state for each input symbol.",
+      "tags": ["dfa"]
+    },
+    {
+      "front": "When does an NFA accept a string?",
+      "back": "When at least one path from the start state to an accepting state spells the string. ε labels add nothing to it.",
+      "tags": ["nfa"]
+    },
+    {
+      "front": "What is ε-closure(s)?",
+      "back": "The set of states reachable from s using ε-moves alone. It always includes s.",
+      "tags": ["epsilon-closure"]
+    },
+    {
+      "front": "How do you simulate an NFA on an input?",
+      "back": "Start with S = ε-closure(s0). For each symbol c, set S = ε-closure(move(S, c)). Accept if the final S contains an accepting state.",
+      "tags": ["simulation"]
+    },
+    {
+      "front": "What is the space-time trade-off between an NFA and a DFA?",
+      "back": "An NFA is small but takes O(|r| |x|) time to run. A DFA takes O(|x|) time but can need exponentially many states in the worst case.",
+      "tags": ["trade-off"]
+    }
+  ]
+}

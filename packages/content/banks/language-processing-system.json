@@ -1,0 +1,231 @@
+{
+  "summary": [
+    "A language processing system runs a source program through a preprocessor, a compiler, an assembler and a linker, and the loader then starts the resulting executable.",
+    "The preprocessor handles file inclusion, macros and conditional compilation, and its output is still source code.",
+    "The compiler produces assembly language, and the assembler turns that into relocatable machine code whose addresses are not final and whose references to other files are still unresolved.",
+    "The linker resolves external references and relocates code to make an executable, and the loader puts that executable in memory and starts it.",
+    "The gcc flags -E, -S and -c stop after preprocessing, compiling and assembling, which lets you inspect each stage's output and find which stage caused an error."
+  ],
+  "practice": [
+    {
+      "id": "which-stage-made-it",
+      "type": "short",
+      "prompt": "For each file, say which stage produced it and whether it is text or binary.\n\n(a) main.i\n(b) main.s\n(c) main.o\n(d) app",
+      "hint": "Work along the pipeline from main.c.",
+      "solution": "(a) Preprocessor. Text.\n(b) Compiler. Text.\n(c) Assembler. Binary.\n(d) Linker. Binary.",
+      "explanation": "The first two are still written in languages a person can read, C and assembly. The last two are machine code. The usual slip is to say the compiler produced main.o, since gcc -c is often described as 'compiling', but it runs the assembler as its last step.",
+      "difficulty": "easy",
+      "tags": ["pipeline", "gcc"],
+      "exams": ["university"]
+    },
+    {
+      "id": "diagnose-errors",
+      "type": "short",
+      "prompt": "Which stage reported each error, and what would you check?\n\n(a) fatal error: foo.h: No such file or directory\n(b) error: expected ';' before 'return'\n(c) undefined reference to `square'",
+      "hint": "Which stage deals with #include lines, which one reads the C grammar, and which one matches names between files?",
+      "solution": "(a) The preprocessor. Check the file name and where the header is located.\n(b) The compiler, during syntax analysis. Check the line before the return statement for a missing semicolon.\n(c) The linker. Check that the object file or library defining square is on the link command, and that the name is spelled the same way.",
+      "explanation": "All three appear when you run gcc, so they can look like compiler errors, but each comes from a different stage. For (c), changing the C code that calls square will usually not help, because the problem is that the definition was not included in the link.",
+      "difficulty": "easy",
+      "tags": ["errors", "gcc"],
+      "exams": ["university"]
+    },
+    {
+      "id": "preprocess-by-hand",
+      "type": "short",
+      "prompt": "Write the output of the preprocessor for this code. Ignore line markers.\n\n#define N 10\n#define DOUBLE(x) x + x\nint a[N]; // table\nint b = DOUBLE(3) * 2;",
+      "hint": "Comments go away, and macros are replaced as plain text. Do not do any arithmetic.",
+      "solution": "int a[10];\nint b = 3 + 3 * 2;",
+      "explanation": "The preprocessor replaces text and does no calculation, so it writes 3 + 3 * 2. When the compiler later evaluates that, multiplication binds tighter, so b is 9 and not the 12 the author probably wanted. Writing int b = 12 or int b = 6 * 2 would mean the preprocessor understood the expression, and it does not. The #define lines themselves do not appear in the output.",
+      "difficulty": "medium",
+      "tags": ["preprocessor", "macros"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "what-to-rerun",
+      "type": "mcq",
+      "prompt": "A program is built from main.c and square.c, and both object files already exist. You edit only square.c. What is the least you must redo to get an up-to-date executable?",
+      "options": [
+        "Only link main.o and square.o again",
+        "Compile square.c to square.o, then link main.o and square.o",
+        "Compile both source files, then link",
+        "Only compile square.c, since the linker runs by itself when the program starts"
+      ],
+      "answer": 1,
+      "hint": "Which object file no longer matches its source, and what depends on it?",
+      "solution": "Compile square.c to square.o, then link main.o and square.o.",
+      "explanation": "This is the point of compiling in pieces: main.o is still correct and can be reused. Linking alone would use the old square.o. Recompiling main.c is unnecessary here, assuming the signature of square did not change. Static linking does not happen when the program starts, so the executable must be linked again.",
+      "difficulty": "medium",
+      "tags": ["linker", "separate-compilation"],
+      "exams": ["GATE", "university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "stage-order",
+      "type": "mcq",
+      "prompt": "What is the correct order of the stages?",
+      "options": [
+        "Compiler, preprocessor, assembler, linker, loader",
+        "Preprocessor, compiler, assembler, linker, loader",
+        "Preprocessor, assembler, compiler, linker, loader",
+        "Preprocessor, compiler, assembler, loader, linker"
+      ],
+      "answer": 1,
+      "hint": "Think about what each stage needs as input. What does the assembler need, and who makes it?",
+      "solution": "Preprocessor, compiler, assembler, linker, loader.",
+      "explanation": "The compiler reads the preprocessor's output, so the first option is backwards. The assembler reads the compiler's output, so the third option is backwards too. The loader needs a finished executable, so it comes after the linker, even though some diagrams draw the two in one box.",
+      "difficulty": "easy",
+      "tags": ["pipeline"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "flag-for-assembly",
+      "type": "mcq",
+      "prompt": "Which gcc flag stops after the compiler has produced an assembly language file?",
+      "options": ["-E", "-S", "-c", "-o"],
+      "answer": 1,
+      "hint": "One flag stops at each stage. List the stages in order, and find the one that writes assembly.",
+      "solution": "-S",
+      "explanation": "-E stops one stage earlier, after preprocessing. -c stops one stage later, after assembling, and writes an object file, and it is easy to confuse with -S. -o only names the output file and does not choose where to stop.",
+      "difficulty": "easy",
+      "tags": ["gcc"],
+      "exams": ["university"]
+    },
+    {
+      "id": "c-flag-output",
+      "type": "mcq",
+      "prompt": "What does gcc -c file.c produce?",
+      "options": [
+        "A preprocessed C file",
+        "An assembly language file",
+        "An object file of relocatable machine code",
+        "An executable program"
+      ],
+      "answer": 2,
+      "hint": "The flag means: do everything except the last build stage.",
+      "solution": "An object file of relocatable machine code.",
+      "explanation": "It stops after assembling, so it writes file.o. Preprocessed output is what -E gives, and assembly is what -S gives. An executable needs linking, which is exactly the step -c skips. That is why a .o file cannot be run.",
+      "difficulty": "easy",
+      "tags": ["gcc", "assembler"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "macro-stage",
+      "type": "mcq",
+      "prompt": "Which stage replaces a macro defined with #define by its expansion?",
+      "options": ["The preprocessor", "The compiler", "The assembler", "The linker"],
+      "answer": 0,
+      "hint": "Which stage acts on lines that begin with #?",
+      "solution": "The preprocessor.",
+      "explanation": "By the time the compiler reads the code, macros are already gone, so it never sees LIMIT, only 5. This is why the compiler is the tempting wrong answer: macros look like part of C. The assembler and linker work much later, on assembly and machine code.",
+      "difficulty": "easy",
+      "tags": ["preprocessor"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "undefined-reference",
+      "type": "mcq",
+      "prompt": "A build fails with the message: undefined reference to `square'. Which stage reported it?",
+      "options": ["The preprocessor", "The compiler", "The linker", "The loader"],
+      "answer": 2,
+      "hint": "The message is about a name that was promised but never found. Which stage looks across all the files?",
+      "solution": "The linker.",
+      "explanation": "The compiler accepts a call to square if it has seen a declaration, so the problem did not show up there. Only the linker looks at all the object files and libraries, so it is the one to discover that no definition exists. The loader never gets involved, because no executable was produced.",
+      "difficulty": "easy",
+      "tags": ["errors", "linker"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "what-include-adds",
+      "type": "mcq",
+      "prompt": "What does #include <stdio.h> normally add to your program?",
+      "options": [
+        "The machine code of printf",
+        "Declarations, such as the declaration of printf",
+        "The final address of printf",
+        "A command telling the linker to skip the C library"
+      ],
+      "answer": 1,
+      "hint": "A header is plain C source text. Which stage handles it, and what does the compiler need before it can check a call?",
+      "solution": "Declarations, such as the declaration of printf.",
+      "explanation": "Headers tell the compiler how to call a function. The code lives in the C library and gets connected by the linker, so the first option is the classic misunderstanding. Addresses are not known until linking or loading, and a header does not tell the linker to skip anything.",
+      "difficulty": "medium",
+      "tags": ["preprocessor", "linker"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "macro-result",
+      "type": "mcq",
+      "prompt": "Given #define SQUARE(x) x * x, what is the value of SQUARE(1 + 2)?",
+      "options": ["3", "5", "9", "It does not compile"],
+      "answer": 1,
+      "hint": "Write out the text after replacement before doing any arithmetic.",
+      "solution": "5",
+      "explanation": "The expansion is 1 + 2 * 1 + 2, and multiplication binds tighter, so the result is 1 + 2 + 2 = 5. The answer 9 assumes the preprocessor adds 1 and 2 first, but it only replaces text. The expansion is valid C, so it does compile, which makes this bug easy to miss.",
+      "difficulty": "medium",
+      "tags": ["preprocessor", "macros"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "why-assembly-output",
+      "type": "mcq",
+      "prompt": "Why might a compiler produce assembly language rather than machine code directly?",
+      "options": [
+        "Assembly is easier to produce and easier to debug",
+        "A processor can execute assembly language directly",
+        "Only assembly language can be optimized",
+        "It removes the need for a linker"
+      ],
+      "answer": 0,
+      "hint": "Think about the compiler writer's job, and who reads the output when something goes wrong.",
+      "solution": "Assembly is easier to produce and easier to debug.",
+      "explanation": "A separate assembler can then take care of encoding instructions and working out addresses. A processor cannot run assembly text, which is why the assembler has to exist. Optimization happens on intermediate code too, and the linker is needed either way to connect separate files.",
+      "difficulty": "medium",
+      "tags": ["compiler", "assembler"],
+      "exams": ["university"]
+    },
+    {
+      "id": "explain-pipeline",
+      "type": "short",
+      "prompt": "Take a C program in two files, a.c and b.c, where a.c calls a function defined in b.c. Explain what each stage takes in and produces, up to the point where the program is running. Say where the call gets connected to the function.",
+      "hint": "Follow a.c through to a.o, do the same for b.c, then bring them together.",
+      "solution": "Each file goes through the same first three stages separately:\n1. The preprocessor takes a.c and produces modified source, with #include and macros resolved.\n2. The compiler takes that and produces assembly.\n3. The assembler takes that and produces a.o, relocatable machine code in which the call to the function in b.c is unresolved.\n\nb.c becomes b.o the same way. Then:\n4. The linker takes a.o, b.o and libraries, connects the call to the function's definition, assigns final locations, and produces an executable.\n5. The loader takes the executable, puts it in memory and starts it.",
+      "explanation": "The key point is that the call is connected by the linker, because no earlier stage sees both files. A good answer gives the input and output of every stage. A common gap is to describe only the compile, or to forget that a.o and b.o are made separately.",
+      "difficulty": "medium",
+      "tags": ["pipeline", "linker"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Name the stages from source file to running program.",
+      "back": "Preprocessor, compiler, assembler, linker, loader.",
+      "tags": ["pipeline"]
+    },
+    {
+      "front": "What does each of the gcc flags -E, -S and -c do?",
+      "back": "-E stops after preprocessing. -S stops after compiling and writes assembly (.s). -c stops after assembling and writes an object file (.o).",
+      "tags": ["gcc"]
+    },
+    {
+      "front": "What three things does a C preprocessor handle?",
+      "back": "File inclusion with #include, macro expansion with #define, and conditional compilation with #ifdef. It also removes comments.",
+      "tags": ["preprocessor"]
+    },
+    {
+      "front": "What two things are still unfinished in relocatable machine code?",
+      "back": "Its addresses are not final, and references to names in other files are unresolved.",
+      "tags": ["assembler"]
+    },
+    {
+      "front": "What two jobs does a linker do?",
+      "back": "It resolves external references, and it relocates code, deciding where each piece goes and adjusting addresses.",
+      "tags": ["linker"]
+    },
+    {
+      "front": "Which stage reports 'undefined reference to square', and why?",
+      "back": "The linker, because it alone sees all the object files and libraries, and none of them defined square.",
+      "tags": ["errors", "linker"]
+    }
+  ]
+}

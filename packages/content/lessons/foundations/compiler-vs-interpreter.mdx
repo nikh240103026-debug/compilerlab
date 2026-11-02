@@ -1,0 +1,140 @@
+---
+id: compiler-vs-interpreter
+module: foundations
+title: Compilers, interpreters, assemblers and linkers
+order: 1
+estimatedMinutes: 20
+prerequisites: []
+outcomes:
+  - Say what a compiler, interpreter, assembler, linker and loader each take in and produce
+  - Compare compiling and interpreting on speed, error reporting, portability and run-time needs
+  - Explain how Java combines compiling and interpreting, and what a just-in-time compiler adds
+  - Identify which program is responsible for a given step when a program is built and run
+visualizers: []
+---
+
+## Why this matters
+
+A processor can run only its own machine code: instructions encoded as bits. Almost nobody writes programs that way. We write in languages like C, Java or Python, and other programs close the gap.
+
+There are two basic ways to close it. You can translate the whole program first and run the translation later, or you can have another program carry out your program's operations directly. Those are the **compiler** and the **interpreter**. The choice affects how fast a program runs, how it reports errors, and how easily it moves to another machine. Three more programs, the **assembler**, the **linker** and the **loader**, handle the steps between a translated program and a running one.
+
+## Five programs, five jobs
+
+### Compiler
+
+A **compiler** reads a program in one language, the **source language**, and translates it into an equivalent program in another language, the **target language**. "Equivalent" means the new program must do what the original does. A compiler also reports any errors it finds in the source program during translation.
+
+A compiler does not run your program. It translates it and stops. If the target is machine code, you can then run the result as many times as you like, on any input, with no compiler present.
+
+```text
+source program  -->  [ compiler ]  -->  target program
+
+         input  -->  [ target program ]  -->  output
+```
+
+### Interpreter
+
+An **interpreter** produces no target program. It takes the source program and the input together, and appears to carry out the program's operations directly.
+
+```text
+source program + input  -->  [ interpreter ]  -->  output
+```
+
+The word "appears" matters. Most interpreters convert the source to an internal form before working on it, so some translation does happen. What makes it an interpreter is that you never get a separate program that runs by itself. The interpreter must be present every time.
+
+### Assembler
+
+**Assembly language** is a human-readable form of machine code, where an instruction is written as a name and operands rather than as bits. An **assembler** translates it into **relocatable machine code**: machine code whose addresses are not final yet, so it can be combined with other code and placed elsewhere in memory later. An assembler is a translator too, but a simple one, because most assembly instructions correspond to a single machine instruction.
+
+### Linker
+
+Large programs are compiled in pieces, often one source file at a time. Code in one file may call a function defined in another, and while compiling the first file, the compiler does not know where that function will end up. A **linker** combines the pieces, along with any library code, into one executable program, and fills in those missing addresses. This is called **resolving external references**.
+
+### Loader
+
+A **loader** is the part of the operating system that copies an executable into memory and starts it. It runs when you launch the program, not when you build it.
+
+### Side by side
+
+| Program | Takes in | Produces | Runs |
+| --- | --- | --- | --- |
+| Compiler | Source program | Target program | Before the program runs |
+| Interpreter | Source program and its input | The program's output | While the program runs |
+| Assembler | Assembly language | Relocatable machine code | Before the program runs |
+| Linker | Relocatable machine code and libraries | Executable program | Before the program runs |
+| Loader | Executable program | The program in memory, started | When the program is launched |
+
+<Callout kind="textbook" title="Linker and loader as one box">
+The Dragon Book's diagram of this system draws a single "Linker/Loader" box, while its text describes the two jobs separately. Older books sometimes use "loader" for a program that also does the linking. On a modern system they are normally separate programs, and part of the linking can happen at load time. The language processing system topic later in this module covers this.
+</Callout>
+
+## Compiling versus interpreting
+
+Neither approach wins on every count.
+
+| Question | Compiling | Interpreting |
+| --- | --- | --- |
+| How fast does it run? | Usually much faster | Usually slower |
+| How long before the first run? | You wait for the translation | It can start right away |
+| How are errors reported? | Many are found before the program runs, even in code this run would not reach | Run-time errors usually get better messages, because it works statement by statement and knows exactly where it is |
+| What must be present at run time? | The target program and any libraries it uses | The interpreter and the source program |
+| How does it move to another kind of machine? | Recompile for that machine | The same source runs, if that machine has an interpreter |
+
+**Why compiled code is faster.** A compiler analyzes each statement once. An interpreter has to work out what to do each time it reaches a statement, so inside a loop it repeats that work on every pass.
+
+**Why error reporting cuts both ways.** A compiler sees the whole program before anything runs, so in a language with static types it can report a type error in a branch that rarely executes. A simple interpreter may not notice until it reaches that line. But when something goes wrong during a run, the interpreter is in the middle of that statement and can say exactly which one failed. This second point is the one the Dragon Book makes when it says interpreters usually give better diagnostics.
+
+### Hybrids: Java bytecode
+
+Real systems often mix the two. Java is the standard example.
+
+1. `javac Hello.java` compiles the source into `Hello.class`, which holds **bytecode**: compact instructions for an abstract machine rather than for any real processor.
+2. `java Hello` starts the **Java Virtual Machine (JVM)**, a program that interprets the bytecode.
+
+The benefit is portability. A class file compiled on one machine can run on a different kind of machine, as long as that machine has a JVM. It can even arrive over a network.
+
+Interpreting costs speed, so many JVMs add a **just-in-time (JIT) compiler**, which translates bytecode into machine code immediately before it runs. A common design starts out interpreting and compiles only the parts that run often, so no time is spent compiling code that barely runs.
+
+| Step | Tool | Takes in | Produces |
+| --- | --- | --- | --- |
+| Compile | `javac` | `Hello.java` | `Hello.class` (bytecode) |
+| Interpret | JVM | Bytecode and input | Output |
+| JIT compile (optional) | JIT compiler inside the JVM | Bytecode | Machine code, held in memory during the run |
+
+Java is not alone. The standard Python implementation also compiles source to bytecode first, then interprets the bytecode.
+
+## Worked example
+
+Take this loop and follow it through three approaches.
+
+```text
+total = 0
+for i = 1 to 1000000
+    total = total + i
+```
+
+**A compiler.** Translation happens once, before the run. The statement `total = total + i` becomes a handful of machine instructions. At run time the processor executes those instructions a million times, and nothing analyzes the source again.
+
+**A simple interpreter.** There is no wait before the run. But on each of the million passes it must work out what `total = total + i` means: an addition, then an assignment, and where `total` and `i` are stored. Only then can it do the addition. An interpreter that first builds an internal form skips re-reading the characters, but it still has to decode that form on every pass.
+
+**Bytecode with a JIT compiler.** `javac` does the analysis once. The JVM starts by decoding bytecode instructions, which is cheaper than analyzing source but is still repeated. When it sees that the loop runs often, the JIT compiler translates the loop, and the remaining passes run as machine code.
+
+| | Compiler | Simple interpreter | Bytecode and JIT |
+| --- | --- | --- | --- |
+| Source analyzed | Once, before the run | On every pass, in the simplest design | Once, by `javac` |
+| Work on each pass | Run machine instructions | Decode the statement, then do it | Decode bytecode at first, run machine instructions later |
+| Wait before the first run | Compile time | Almost none | Compile time once, then some JIT time during the run |
+| Needed to run | Target program | Interpreter and source | JVM and bytecode |
+
+The loop shows why compiling pays off when code runs many times. If the program ran once and each statement ran once, the time saved at run time could be smaller than the time spent compiling.
+
+## Common mistakes
+
+- **Thinking a compiler always produces machine code.** The target can be any language. `javac` targets bytecode, the TypeScript compiler targets JavaScript, and many compilers target assembly language.
+- **Calling a language "compiled" or "interpreted" as if that were a fact about the language.** It is a fact about an implementation. C interpreters exist, and the standard Python implementation includes a compiler to bytecode.
+- **Thinking an interpreter translates nothing.** Most build an internal form first. The real difference is that no separate target program comes out.
+- **Thinking a compiled program needs the compiler to run.** It does not. An interpreted program does need its interpreter, every time.
+- **Learning "a compiler shows all errors, an interpreter stops at the first."** This is a rough summary, not a rule. Compilers try to recover and keep going, but some errors, such as dividing by a value that turns out to be zero, can only show up during a run, whichever approach you use.
+- **Treating the linker and the loader as one job.** The linker builds an executable file. The loader puts that file in memory and starts it.
+- **Thinking bytecode is machine code.** It is written for a virtual machine. An ordinary processor cannot run it without a JVM or some other translator.

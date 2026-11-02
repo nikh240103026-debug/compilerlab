@@ -1,0 +1,155 @@
+---
+id: input-buffering
+module: lexical-analysis
+title: Input buffering
+order: 3
+estimatedMinutes: 25
+prerequisites:
+  - role-of-the-lexer
+outcomes:
+  - Explain why a lexer reads blocks of characters instead of one character at a time
+  - Explain why a lexer needs lookahead, with examples
+  - Trace the lexemeBegin and forward pointers through a buffer pair
+  - Explain how sentinels reduce the number of tests made per character
+visualizers:
+  - id: input-buffer
+    label: Input buffer
+    props:
+      text: 'position = initial + rate * 60'
+      size: '8'
+---
+
+## Why this matters
+
+The lexer is the only phase of a compiler that looks at every character of the source program. A large program has a lot of characters, so even a small cost per character adds up to a large share of the compile time.
+
+Reading characters has two costs, and this lesson fixes one at a time:
+
+1. **Getting characters out of the file.** The **buffer pair** deals with this.
+2. **Checking each character.** **Sentinels** deal with this.
+
+## Why one character at a time is slow
+
+A program cannot read a file directly. It asks the operating system through a **system call**, and a system call is much slower than reading a value that is already in memory.
+
+If the lexer made one system call per character, a file of a million characters would need a million calls. Instead, one system read command can fetch a whole block of characters into an area of memory called a **buffer**. Let $N$ be the size of the buffer, usually the size of a disk block, such as 4096 bytes. Then one call supplies the next $N$ characters, and the lexer takes them from memory.
+
+## Why the lexer needs lookahead
+
+A buffer also solves a second problem. The lexer often cannot tell that a lexeme has ended until it has read past the end.
+
+- An identifier such as `count` is not finished until the lexer sees a character that is not a letter or digit.
+- In C, the characters `-`, `=` and `<` could each be a whole operator, or the start of `->`, `==` or `<=`.
+
+Reading ahead like this is called **lookahead**. It often means reading one character too many and then giving it back. With a buffer, giving a character back is cheap: move a pointer back by one.
+
+## The buffer pair
+
+The lexer uses two buffers of size $N$, and reloads them in turn. When fewer than $N$ characters remain in the file, a special character, written `eof`, marks the end of the input. It is different from any character of the source program.
+
+Two pointers move over the buffers:
+
+- **`lexemeBegin`** marks the start of the current lexeme. It stays put while the lexer works out where the lexeme ends.
+- **`forward`** scans ahead, one character at a time, until a pattern match is found.
+
+A lexeme is handled like this:
+
+1. Both pointers start at the first character of the next lexeme.
+2. `forward` moves ahead until the lexeme is determined. If it has passed the end of the lexeme, it is moved back so that it sits at the lexeme's right end. For example, to recognize `**`, it must read one character past it, and then back up one.
+3. The characters from `lexemeBegin` to `forward` are the lexeme, and they are recorded as needed for the token returned to the parser.
+4. `lexemeBegin` is set to the character immediately after the lexeme, and the next lexeme begins there.
+
+When `forward` reaches the end of a buffer, the lexer loads the next $N$ characters into the *other* buffer and moves `forward` to its start.
+
+### Why two buffers?
+
+A lexeme can straddle the end of a block. With a single buffer, loading the next block would destroy the start of the lexeme before the lexer finished with it. With two, the next block goes into the other buffer, so the start of the lexeme is still there, and `lexemeBegin` can keep pointing at it.
+
+This protection has a limit. The Dragon Book's rule is that the lexeme cannot be overwritten as long as its length plus the lookahead distance is at most $N$. For example, with $N = 4096$ and one character of lookahead, any lexeme of up to 4095 characters is safe. Two buffers do not mean you can rely on $2N$: if `forward` runs off the end of the second buffer, the next reload overwrites the buffer that may hold the start of the lexeme.
+
+In most languages, lexemes are short and one or two characters of lookahead is enough, so a buffer of a few thousand characters is ample. Two things can still cause trouble:
+
+- **Very long strings.** A long string can be treated as a concatenation of parts, one per line, as is conventional in Java with the `+` operator.
+- **Unreserved keywords.** PL/I does not reserve its keywords. When a program begins `DECLARE ( ARG1, ARG2, ...`, the lexer cannot tell whether `DECLARE` is a keyword or the name of a procedure without looking far ahead. This is one reason modern languages tend to reserve their keywords. Otherwise, the lexer can treat such a word as an ambiguous identifier and let the parser decide.
+
+<Callout kind="note" title="How the visualizer differs from a real lexer">
+The visualizer treats any run of characters between whitespace as a lexeme, to keep the focus on the pointers. So `E=M*C**2` with no spaces counts as one lexeme there, and `forward` never has to back up. It also keeps its own copy of the current lexeme, so it can carry on when a lexeme is too long for the buffers. It says so when that happens, and a lexer with only the pointers could not recover.
+</Callout>
+
+## Sentinels
+
+As described so far, each time the lexer advances `forward`, it makes two tests:
+
+1. Has `forward` moved off the end of the buffer? If so, reload the other buffer.
+2. Which character did it read? This may be a multiway branch.
+
+The first test almost always answers no, which seems wasteful. A **sentinel** merges the two tests into one. Each buffer gets one extra slot at its end, holding a special character that cannot be part of the source program. The natural choice is `eof`. Now the lexer only tests the character, and `eof` is simply one more case:
+
+```text
+switch (the character at forward, then advance forward) {
+  case eof:
+    if (at the end of the first buffer) {
+      reload the second buffer; move forward to its start;
+    } else if (at the end of the second buffer) {
+      reload the first buffer; move forward to its start;
+    } else {
+      // eof inside a buffer: the input has really ended
+      stop lexical analysis;
+    }
+    break;
+  all other characters:
+    handle them as usual;
+}
+```
+
+For an ordinary character, the one test is the only test. The extra checks run only when the character really is `eof`, which happens about once every $N$ characters.
+
+| | Tests for an ordinary character | Extra work |
+| --- | --- | --- |
+| Without sentinels | 2: end of buffer, then which character | none |
+| With sentinels | 1: which character | one more slot per buffer, and a few checks at each `eof` |
+
+Notice what `eof` now means. At the end of a buffer, it means "reload". Anywhere else, it means the input has ended.
+
+<Callout kind="textbook" title="How the tests are counted">
+The Dragon Book describes the saving as going from two tests per character to one, counting the end-of-buffer check as one test even though there are two buffers to check. The counter in the visualizer counts one test each time `forward` looks at a cell, including each `eof` it reaches. It does not count the checks that follow an `eof`. An exam question that asks for a total should say how it is counting.
+</Callout>
+
+## Worked example
+
+The visualizer starts with `position = initial + rate * 60`, which is 30 characters, and buffers of size 8. Step through it and check each stage against this list.
+
+**First load.** Buffer 1 gets `position`, followed by `eof`. Both pointers are at `p`.
+
+**A lexeme fills the buffer.** `forward` reads all 8 letters and reaches the `eof` in the last slot. The lexer still cannot be sure `position` is finished, because the next character is not in memory yet. So it loads Buffer 2 with ` = initi`, and moves `forward` to its first slot. `lexemeBegin` stays at `p`, back in Buffer 1. Now `forward` sees a space, so the lexeme `position` is complete.
+
+**A lexeme crosses a boundary.** After `=`, `lexemeBegin` is at the `i` of `initi` in Buffer 2, and `forward` reaches the `eof` at the end of that buffer. The lexer reloads Buffer 1 with `al + rat`. This overwrites `position`, which is fine because that lexeme is finished. The start of `initial` is safe in Buffer 2. Then `forward` reads `al`, sees a space, and `initial` is complete.
+
+**The same thing happens again.** `rate` begins in Buffer 1 as `rat`, and Buffer 2 is reloaded with `e * 60`.
+
+**End of input.** After `60`, `forward` reaches an `eof` in slot 6 of Buffer 2. That is not the end of the buffer, so the input has ended.
+
+The totals, which the visualizer shows at the last step:
+
+| Measure | Count | How it comes out |
+| --- | --- | --- |
+| Characters read | 30 | the whole input |
+| Reloads | 3 | 4 loads ($8 + 8 + 8 + 6$), of which the first is not a reload |
+| Tests with sentinels | 34 | 30 characters, 3 `eof`s that cause a reload, and the final `eof` |
+| Tests without sentinels | 60 | 2 for each of the 30 characters |
+
+With realistic buffers of thousands of characters, there are far fewer `eof`s for the same input, so the saving gets close to one half.
+
+Now see the limit. With buffers of size 4, `position` plus one character of lookahead needs 9 characters, which is more than $N$. Watch Buffer 1 while `forward` reads it. The buffers fill with `posi` and `tion`, and then Buffer 1 is reloaded with ` = i` before the lexeme has ended. `lexemeBegin` now points at a character that is no longer the start of `position`.
+
+<TryIt visualizer="input-buffer" text="position = initial + rate * 60" size="4">Run it with buffers of size 4</TryIt>
+
+## Common mistakes
+
+- **Thinking sentinels remove the end-of-buffer check.** They do not remove it. They move it inside the `eof` case, so it runs only when the character actually is `eof`.
+- **Thinking `eof` always means the end of the file.** An `eof` at the end of a buffer only means "reload the other buffer". Only an `eof` elsewhere means the input has ended.
+- **Thinking two buffers make lexemes of length $2N$ safe.** The guarantee is that lexeme length plus lookahead is at most $N$. A longer lexeme may survive if it starts in a lucky place, but nothing promises that.
+- **Forgetting the sentinel's slot.** Each buffer holds $N$ characters plus one sentinel.
+- **Moving `lexemeBegin` too soon.** It stays at the start of the lexeme until the lexeme is finished. Only `forward` moves during scanning.
+- **Forgetting to back up.** If `forward` read past the lexeme to find its end, it has to move back. Otherwise, the first character of the next lexeme is lost.
+- **Mixing up the two savings.** Reading in blocks reduces system calls. Sentinels reduce tests per character. They solve different problems.

@@ -1,44 +1,36 @@
 import { Link } from 'react-router';
-import { ModuleChip } from '@/components/module-chip';
-import { PlannedFeature } from '@/components/planned-feature';
-import { Card } from '@/components/ui/card';
-import { useModules } from '@/hooks/use-system';
+import { moduleColor, ModuleChip } from '@/components/module-chip';
+import { Page, PageHeader } from '@/components/page';
+import { VISUALIZERS } from '@/visualizers/registry';
 
 export function Component() {
-  const { data: modules = [] } = useModules();
-  const withVisualizers = modules.filter((module) => module.visualizers.length > 0);
-
   return (
-    <PlannedFeature
-      title="Visualizers"
-      lead="Watch each algorithm run one step at a time, on your own regex, grammar or code."
-      milestone="Starts in Milestone 2"
-      points={[
-        'Play, pause, step forward and back, scrub, and change speed',
-        'A plain-language explanation of every step',
-        'A playground for each visualizer, with clear errors on bad input',
-        'Export any step as PNG, SVG or GIF',
-      ]}
-    >
-      <Card className="p-5">
-        <h2 className="mb-3 text-base font-semibold">Planned by module</h2>
-        <ul className="space-y-2">
-          {withVisualizers.map((module) => (
-            <li key={module.id}>
-              <Link
-                to={`/learn/${module.id}`}
-                className="-mx-2 flex items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-surface-2"
-              >
-                <ModuleChip number={module.number} />
-                <span className="min-w-0 flex-1 truncate">{module.title}</span>
-                <span className="font-mono text-xs text-ink-muted">
-                  {module.visualizers.length}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </Card>
-    </PlannedFeature>
+    <Page>
+      <PageHeader
+        title="Visualizers"
+        lead="Watch each algorithm run one step at a time, on your own regex, grammar or code. Every step explains itself, and any step can be exported as an image."
+      />
+      <ul className="grid gap-3 md:grid-cols-2">
+        {VISUALIZERS.map((entry) => (
+          <li key={entry.id}>
+            <Link
+              to={`/visualize/${entry.id}`}
+              style={moduleColor(entry.moduleNumber)}
+              className="flex h-full flex-col gap-1.5 rounded-lg border border-line bg-surface p-4 transition-colors duration-(--duration-fast) hover:border-line-strong hover:bg-surface-2"
+            >
+              <span className="flex items-center gap-2">
+                <ModuleChip number={entry.moduleNumber} />
+                <span className="font-medium">{entry.title}</span>
+              </span>
+              <span className="text-sm text-ink-muted">{entry.description}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-6 text-sm text-ink-muted">
+        Visualizers for parsing, semantic analysis, code generation and runtime arrive with their
+        modules.
+      </p>
+    </Page>
   );
 }

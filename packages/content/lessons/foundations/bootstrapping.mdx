@@ -1,0 +1,176 @@
+---
+id: bootstrapping
+module: foundations
+title: Bootstrapping and cross-compilers
+order: 3
+estimatedMinutes: 25
+prerequisites:
+  - compiler-phases
+outcomes:
+  - Describe any compiler by its source, target and implementation languages, using T-diagram notation
+  - Work out what comes out when one compiler is compiled by another
+  - Explain what self-hosting means and how a first compiler gets built
+  - Define a cross-compiler and use one to move a compiler to a new machine
+visualizers: []
+---
+
+## Why this matters
+
+Most compilers today are written in high-level languages. GCC is written in C and C++, the Rust compiler is written in Rust, and the Go compiler is written in Go.
+
+That raises an awkward question. To compile the Rust compiler you need a Rust compiler, so where did the first one come from? The answer is **bootstrapping**: building a compiler in steps, starting from simpler tools. The same technique moves a compiler onto a new machine where no compiler exists yet.
+
+## Three languages, one T
+
+Every compiler involves three languages:
+
+- The **source language** it reads.
+- The **target language** it produces.
+- The **implementation language** it is itself written in.
+
+A **T-diagram** arranges these three in the shape of a letter T. The left arm holds the source, the right arm holds the target, and the stem holds the implementation language. Translation goes across the top, from left to right, and the stem says what the translator is made of.
+
+This lesson writes a T-diagram on one line as `S→T in I`.
+
+| Compiler | Left arm (source) | Right arm (target) | Stem (written in) | On one line |
+| --- | --- | --- | --- | --- |
+| A C compiler, ready to run on an x86 machine | C | x86 | x86 | `C→x86 in x86` |
+| The source code of that same compiler | C | x86 | C | `C→x86 in C` |
+| A new compiler for a language L, written in C, producing ARM code | L | ARM | C | `L→ARM in C` |
+
+The stem tells you whether you can run it. A compiler can run only if its stem is the machine language of a machine you have. `C→x86 in C` is just a text file until something compiles it.
+
+<Callout kind="textbook" title="Notation varies">
+T-diagrams are a standard classroom notation, but they are not part of the overview in Chapter 1 of the Dragon Book's second edition. Books write them in different ways, including letter triples such as `LSN`, and subscripts and superscripts. The meaning is always the same three languages. Check how your course writes them and which position means what.
+</Callout>
+
+### Compiling a compiler
+
+A compiler is a program, so you can feed it to another compiler. The rule for what comes out is the key to this whole topic.
+
+Suppose you compile `S→T in I` with a compiler `I→X in M`, where M is a machine you have. The stem of the first must match the left arm of the second.
+
+| Role | Source | Target | Written in |
+| --- | --- | --- | --- |
+| The compiler being compiled | S | T | I |
+| The compiler doing the compiling | I | X | M |
+| What comes out | S | T | X |
+
+**The arms stay the same, and only the stem changes.** Translating a program into another language does not change what the program does. This program reads S and writes T, so the new version does too. It is just written in X now.
+
+To picture it, stand the first T with its stem on the left arm of the second T. The right arm of the second T gives the new stem.
+
+## Self-hosting
+
+A compiler is **self-hosting** if it is written in the language it compiles. Its stem matches its left arm, as in `L→T in L`.
+
+Language designers like this for several reasons:
+
+- They use their own language every day, so they find its problems early.
+- Compiling the compiler is a large and demanding test of the compiler.
+- When the optimizer improves, the compiler itself gets faster the next time it is compiled.
+- Moving to a new machine mostly means writing a new back end, as the worked example shows.
+
+## How a first compiler gets built
+
+A self-hosting compiler still needs another way to get started. There are three usual routes.
+
+**Route 1: write the first version in an existing language.** The first Rust compiler was written in OCaml, and the Go compiler was written in C until version 1.5. Once that first compiler works, you can rewrite the compiler in the new language and compile it with the old version. A variation is to target an existing language: Cfront, the original C++ compiler, generated C.
+
+**Route 2: grow it from a subset.** To build language L on machine M:
+
+| Step | What you do | Result |
+| --- | --- | --- |
+| 1 | Write a compiler for a small subset S of L, in assembly language | `S→M in M` |
+| 2 | Write a compiler for all of L, using only the subset S | `L→M in S`, which is only text so far |
+| 3 | Compile step 2 with step 1 | `L→M in M`, a full compiler for L that runs on M |
+| 4 | Optionally, rewrite the compiler using all of L and compile it with step 3 | A self-hosting compiler |
+
+**Route 3: use an interpreter.** Write an interpreter for L in an existing language. Then write the compiler `L→M in L`, and run it inside the interpreter, giving it its own source as input. What comes out is `L→M in M`, and the interpreter is no longer needed. Lisp was bootstrapped this way in 1962, by Hart and Levin at MIT.
+
+<Callout kind="textbook" title="Which language came first?">
+Sources disagree about which language was first to be implemented in itself. NELIAC and Lisp are both named, from around 1960. This is history rather than exam material, so do not memorize "the first".
+</Callout>
+
+## Why compile it twice
+
+**What a compiler generates is decided by its source code. How fast the compiler itself runs is decided by whichever compiler compiled it.** Students often run these two together, so here is an example that separates them.
+
+Suppose you add a better optimizer to the source of your compiler, then build it with the old compiler, which generates poor code.
+
+| Build | Compiled by | Quality of code it generates | How fast it runs |
+| --- | --- | --- | --- |
+| C1 | The old compiler | Good, because its source now has the new optimizer | Slow, because the old compiler produced its machine code |
+| C2 | C1 | Good, for the same reason | Fast, because C1 produced its machine code |
+
+C1 and C2 come from the same source, so they translate any input to the same output. They are different files only because different compilers built them.
+
+This gives a useful check. Compile the source once more with C2, to get C3. Since C1 and C2 behave identically, C2 and C3 should be identical, byte for byte. GCC's standard build does exactly this. It is a **three-stage bootstrap**: the system's existing compiler builds stage 1, stage 1 builds stage 2, stage 2 builds stage 3, and then stages 2 and 3 are compared. A difference points to a bug.
+
+## Cross-compilers
+
+Two words help here. The **host** is the machine a compiler runs on. The **target** is the machine its output runs on.
+
+- A **native compiler** has the same host and target. `C→x86 in x86` runs on x86 and produces x86 code.
+- A **cross-compiler** has a different host and target. `C→ARM in x86` runs on x86 and produces ARM code.
+
+You need one when the target cannot do the job itself:
+
+- It is too small to run a compiler, like the microcontroller inside a washing machine.
+- It is new, and no compiler exists for it yet.
+- It is much slower than the machine you develop on. Phone apps, for example, are normally built on a laptop.
+
+The output of a cross-compiler does not run on the machine that built it, unless that machine has an emulator for the target.
+
+<Callout kind="note" title="Three machines in GCC's build system">
+GCC's build system names three machines, with the configure options `--build`, `--host` and `--target`: where the compiler is built, where it will run, and what it generates code for. When all three differ, this is known as a Canadian cross.
+</Callout>
+
+## Worked example
+
+You have language L working on machine A, and you want L on a new machine B that has no compiler at all. You start with two things:
+
+- `L→A in L`, the compiler's source code.
+- `L→A in A`, the compiled version, running on A.
+
+**Step 1: write a new back end.** Change the code generator so that it produces B code. The source is now `L→B in L`. The front end does not change, because it depends on L and not on the machine. So far this is only text.
+
+**Step 2: compile that source with the compiler you already have.** Apply the rule.
+
+| Role | Source | Target | Written in |
+| --- | --- | --- | --- |
+| Being compiled | L | B | L |
+| Doing the compiling | L | A | A |
+| What comes out | L | B | A |
+
+The result is `L→B in A`, a cross-compiler. It runs on A and produces code for B.
+
+**Step 3: compile the same source again, this time with the cross-compiler.**
+
+| Role | Source | Target | Written in |
+| --- | --- | --- | --- |
+| Being compiled | L | B | L |
+| Doing the compiling | L | B | A |
+| What comes out | L | B | B |
+
+The result is `L→B in B`. You ran this compile on A, but the file it wrote is B machine code.
+
+**Step 4: copy that file to B.** You now have a native compiler on B. As a check, use it on B to compile `L→B in L` again. The file you get should match the compiler you just ran, byte for byte, for the same reason as the three-stage check above.
+
+Here is everything you started with or built:
+
+| Step | Result | Runs on | Produces code for |
+| --- | --- | --- | --- |
+| Start | `L→A in A` | A | A |
+| 2 | `L→B in A` | A | B |
+| 3 | `L→B in B` | B | B |
+
+## Common mistakes
+
+- **Confusing the right arm with the stem.** In `L→B in A`, the compiler runs on A and produces code for B. Asking "where does it run?" points at the stem, and "what does it produce?" points at the right arm.
+- **Expecting the arms to change when a compiler is compiled.** Compiling changes only the stem. A compiler that produced B code before being compiled still produces B code afterward.
+- **Thinking a self-hosting compiler needs no other compiler.** Its source cannot run by itself. Even now, building a self-hosting compiler from source starts with an existing compiled copy.
+- **Thinking "cross" refers to languages.** A C++ to C translator is a source-to-source compiler, not a cross-compiler. "Cross" is about machines.
+- **Expecting a cross-compiled program to run on the machine that built it.** It is machine code for a different processor.
+- **Expecting stage 1 and stage 2 to match.** They come from the same source, but different compilers built them. It is stages 2 and 3 that should match.
+- **Thinking a port means rewriting the compiler.** Usually only the back end changes, which is one of the rewards of separating the front end from the back end.

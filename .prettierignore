@@ -8,3 +8,5 @@ package-lock.json
 # Kept as converted from the original build prompt.
 CLAUDE.md
 docs/SPEC.md
+# Prettier can change the meaning of math and escapes in lesson text.
+*.mdx

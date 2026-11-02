@@ -1,0 +1,256 @@
+{
+  "summary": [
+    "An alphabet is a finite set of symbols, a string is a finite sequence of them, and a language is a set of strings. Languages are combined by union, concatenation and Kleene closure.",
+    "A regular expression is built from ε and single symbols using |, concatenation and *. The star binds tightest, then concatenation, then |, and all three are left associative.",
+    "Two regular expressions are equivalent if they denote the same language. Algebraic laws such as r(s|t) = rs|rt and r** = r* hold, but concatenation is not commutative, and (a|b)* is not a*|b*.",
+    "Regular definitions give names to subexpressions, and each definition may use only earlier names. The shorthands +, ? and character classes make expressions shorter but add no power.",
+    "Regular expressions cannot match one unlimited count against another, so they cannot describe balanced parentheses or the language of a^n b^n. That is the parser's job."
+  ],
+  "practice": [
+    {
+      "id": "regex-ends-in-abb",
+      "type": "regex",
+      "prompt": "Over the alphabet {a, b}, write a regular expression for all strings that end in abb.",
+      "reference": "(a|b)*abb",
+      "accepts": ["abb", "aabb", "babb", "abbabb"],
+      "rejects": ["", "ab", "abba", "bbb"],
+      "hint": "What can come before the last three symbols? Is anything forbidden there?",
+      "solution": "(a|b)*abb",
+      "explanation": "The closure (a|b)* allows any string at all, including the empty one, and abb fixes the ending. A common wrong answer is a*b*abb, which misses strings such as baabb. Another is (ab)*abb, which misses aabb.",
+      "difficulty": "easy",
+      "tags": ["regex", "writing"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "regex-c-identifier",
+      "type": "regex",
+      "prompt": "Write a regular expression for C identifiers: a letter or underscore, followed by any number of letters, digits or underscores. Letters may be upper or lower case.",
+      "reference": "[A-Za-z_][A-Za-z0-9_]*",
+      "accepts": ["x", "_tmp", "count2", "A_b"],
+      "rejects": ["", "2x", "a-b", "a b"],
+      "hint": "Describe the first character separately from the rest, since digits are allowed only in one of those places.",
+      "solution": "[A-Za-z_][A-Za-z0-9_]*",
+      "explanation": "The first class rules out a leading digit, and the star on the second allows any length, including a single character. Using one class with a star, such as [A-Za-z0-9_]*, wrongly accepts 2x and the empty string. Using + on the second class wrongly rejects x.",
+      "difficulty": "easy",
+      "tags": ["regex", "identifiers", "character-classes"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "regex-unsigned-number",
+      "type": "regex",
+      "prompt": "Write a regular expression for unsigned numbers: one or more digits, then an optional fraction (a dot and one or more digits), then an optional exponent (E, an optional + or -, and one or more digits).\n\nExamples: 5280, 0.01234, 6.336E4, 1.89E-4",
+      "reference": "[0-9]+(\\.[0-9]+)?(E[+-]?[0-9]+)?",
+      "accepts": ["5280", "0.01234", "6.336E4", "1.89E-4", "1.5E+10"],
+      "rejects": ["", ".5", "1.", "E4", "1E"],
+      "hint": "Build it in three parts, and make the last two optional. Remember how to write a literal dot.",
+      "solution": "[0-9]+(\\.[0-9]+)?(E[+-]?[0-9]+)?",
+      "explanation": "Each optional part is grouped, so ? applies to the whole of it. Writing . instead of \\. would match any character there, such as 1x5. Leaving out the parentheses, as in [0-9]+\\.[0-9]+?, would make only the last digit class optional, and the dot would be required.",
+      "difficulty": "medium",
+      "tags": ["regex", "numbers"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "regex-even-as",
+      "type": "regex",
+      "prompt": "Over the alphabet {a, b}, write a regular expression for all strings with an even number of a's. Zero counts as even.",
+      "reference": "(b|ab*a)*",
+      "accepts": ["", "b", "aa", "baab", "abab", "aabbaa"],
+      "rejects": ["a", "ab", "aaa", "abbbaa"],
+      "hint": "Cut any valid string into chunks, where each chunk either has no a at all or has exactly two.",
+      "solution": "(b|ab*a)*",
+      "explanation": "A string with an even number of a's splits into pieces that are either a lone b, or two a's with any number of b's between them. An equivalent form is b*(ab*ab*)*. The answer (aa|b)* is a common mistake: it misses abab, where the two a's are not next to each other.",
+      "difficulty": "medium",
+      "tags": ["regex", "writing"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "regex-no-double-one",
+      "type": "regex",
+      "prompt": "Over the alphabet {0, 1}, write a regular expression for all strings with no two consecutive 1s.",
+      "reference": "(0|10)*(1|ε)",
+      "accepts": ["", "0", "1", "10", "0101", "1010"],
+      "rejects": ["11", "0110", "111"],
+      "hint": "Think about what must come right after a 1, unless that 1 is the very last symbol.",
+      "solution": "(0|10)*(1|ε)",
+      "explanation": "Every 1 except possibly the last must be followed by a 0, so the string is made of chunks 0 and 10, and may end with one extra 1. The usual wrong answer is (0|10)*, which misses strings that end in 1, such as 1 and 0101. An equivalent answer is (ε|1)(0|01)*.",
+      "difficulty": "hard",
+      "tags": ["regex", "writing"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "prove-parens-not-regular",
+      "type": "short",
+      "prompt": "Explain why no regular expression can describe the language of balanced parentheses. Use the fact that every regular expression can be turned into a DFA with a fixed number of states.",
+      "hint": "Suppose such a DFA has k states, and feed it strings made only of opening parentheses. How many different such strings are there, compared with k?",
+      "solution": "Suppose a DFA with k states accepts exactly the balanced strings. Consider the k + 1 strings made of 0, 1, ..., k opening parentheses. By the pigeonhole principle, two of them, with i and j parentheses where i ≠ j, end in the same state. Now follow each with i closing parentheses. Because the machine is in the same state in both cases, it ends in the same final state in both. But the first string is balanced and must be accepted, and the second is not balanced and must be rejected. That is a contradiction, so no such DFA exists, and therefore no regular expression exists.",
+      "explanation": "The key point is that a DFA can remember only one of finitely many things, so it cannot keep an unlimited count of open parentheses. Saying \"it cannot count\" is not enough on its own, because a DFA can count up to any fixed limit. A full answer has to show why a limit causes a failure.",
+      "difficulty": "hard",
+      "tags": ["regular-languages", "limits"],
+      "exams": ["university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "precedence-membership",
+      "type": "mcq",
+      "prompt": "Which string is NOT in the language of a|b*c?",
+      "options": ["a", "c", "bbc", "ac"],
+      "answer": 3,
+      "hint": "Add parentheses according to the precedence rules before you test anything.",
+      "solution": "ac",
+      "explanation": "The expression means (a)|((b)*(c)): either a alone, or any number of b's followed by c. So a, c and bbc are all in it. The string ac would be in (a|b*)c, which is what you get if you wrongly give | a higher precedence than concatenation.",
+      "difficulty": "easy",
+      "tags": ["precedence"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "equivalent-to-all-strings",
+      "type": "mcq",
+      "prompt": "Which expression is equivalent to (a|b)*?",
+      "options": ["a*|b*", "a*b*", "(a*b*)*", "(ab)*"],
+      "answer": 2,
+      "hint": "Look for a string of a's and b's that each candidate misses. Try ab and ba.",
+      "solution": "(a*b*)*",
+      "explanation": "Each round of a*b* can contribute a single a or a single b, so any string can be built. a*|b* misses ab, a*b* misses ba, and (ab)* misses a.",
+      "difficulty": "medium",
+      "tags": ["equivalence"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "language-concat-count",
+      "type": "mcq",
+      "prompt": "Let L be the set of 52 letters and D the set of 10 digits, each as strings of length 1. How many strings are in LD?",
+      "options": ["62", "520", "52", "10"],
+      "answer": 1,
+      "hint": "Each string in LD is built by choosing one string from each set.",
+      "solution": "520",
+      "explanation": "Each string in LD is one letter followed by one digit, so there are 52 × 10 of them. The answer 62 is the size of the union, L ∪ D, not the concatenation. The other two are the sizes of L and D on their own.",
+      "difficulty": "easy",
+      "tags": ["languages", "counting"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "positive-closure-epsilon",
+      "type": "mcq",
+      "prompt": "When does L+ contain the empty string?",
+      "options": [
+        "Always",
+        "Never",
+        "Exactly when L contains the empty string",
+        "Only when L is the empty set"
+      ],
+      "answer": 2,
+      "hint": "L+ is the union of L, LL, LLL and so on. Can joining non-empty strings ever give the empty string?",
+      "solution": "Exactly when L contains the empty string.",
+      "explanation": "If ε is in L, then it is in L+, since L+ includes L itself. If not, every string in L+ is made of at least one non-empty string. \"Always\" is the rule for L*, not L+. \"Never\" fails for a language such as {ε, a}. If L is the empty set, then L+ is also empty and has no ε.",
+      "difficulty": "medium",
+      "tags": ["closure"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "empty-set-star",
+      "type": "mcq",
+      "prompt": "What is the Kleene closure of the empty language, ∅*?",
+      "options": ["∅", "{ε}", "Every string over the alphabet", "It is not defined"],
+      "answer": 1,
+      "hint": "L* is the union of L to the power i, starting from i = 0. What is L to the power 0, for any L?",
+      "solution": "{ε}",
+      "explanation": "L to the power 0 is {ε} for every language L, and all higher powers of ∅ are ∅. So the union is {ε}. It is tempting to answer ∅ because there are no strings to repeat, but taking zero strings still gives the empty string. The operation is defined for every language.",
+      "difficulty": "medium",
+      "tags": ["closure", "empty-language"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "not-a-law",
+      "type": "mcq",
+      "prompt": "Which of these is NOT a law that holds for all regular expressions r, s and t?",
+      "options": ["r|s = s|r", "rs = sr", "r(s|t) = rs|rt", "r* = (r|ε)*"],
+      "answer": 1,
+      "hint": "Try each law with short strings for r and s, such as r = a and s = b.",
+      "solution": "rs = sr",
+      "explanation": "Concatenation is not commutative: ab and ba are different languages. Union is commutative, which makes the first option a tempting pattern to overgeneralize from. The third is the distributive law, and the fourth holds because a closure already contains ε.",
+      "difficulty": "easy",
+      "tags": ["algebraic-laws"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "invalid-regular-definition",
+      "type": "mcq",
+      "prompt": "Why is this not a valid regular definition?\n\nparen → ( paren ) | ε",
+      "options": [
+        "A regular definition cannot use ε",
+        "A definition may use only names defined before it, and paren refers to itself",
+        "Parentheses cannot appear in a regular expression, even as symbols of the alphabet",
+        "Each definition must contain a star"
+      ],
+      "answer": 1,
+      "hint": "Try replacing every name by its definition, to reach an expression with no names in it. What happens?",
+      "solution": "A definition may use only names defined before it, and paren refers to itself.",
+      "explanation": "Each right side may mention only earlier names, so substitution always ends. With a self-reference, it never ends. This rule is a grammar production, and it can describe nesting that no regular expression can. ε is allowed in a regular definition, as optionalFraction shows, and parentheses can be symbols if they are in the alphabet. No rule requires a star.",
+      "difficulty": "medium",
+      "tags": ["regular-definitions"],
+      "exams": ["university"]
+    },
+    {
+      "id": "not-regular",
+      "type": "mcq",
+      "prompt": "Which of these languages is NOT regular?",
+      "options": [
+        "Strings over {a, b} that end in abb",
+        "Strings over {a, b} with an even number of a's",
+        "All strings of the form a^n b^m, with n, m ≥ 0",
+        "All strings of the form a^n b^n, with n ≥ 0"
+      ],
+      "answer": 3,
+      "hint": "Which one would force a machine to remember an unlimited count, and compare it with something later?",
+      "solution": "All strings of the form a^n b^n, with n ≥ 0.",
+      "explanation": "Matching the b's against the a's takes an unlimited count, which a finite number of states cannot hold. The third option looks similar but is regular: it is just a*b*, because n and m are not tied together. The even-count language is regular too, since a machine only has to remember odd or even, which is two states.",
+      "difficulty": "medium",
+      "tags": ["regular-languages", "limits"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "define-regex",
+      "type": "short",
+      "prompt": "Give the formal definition of a regular expression over an alphabet Σ, including the language each form denotes. Then state the precedence of the operators.",
+      "hint": "The definition has a basis with two cases, and an induction with four. Precedence has three levels.",
+      "solution": "Basis: ε is a regular expression, with L(ε) = {ε}. If a is a symbol in Σ, then a is a regular expression, with L(a) = {a}.\nInduction: if r and s are regular expressions, then (r)|(s) denotes L(r) ∪ L(s), (r)(s) denotes L(r)L(s), (r)* denotes (L(r))*, and (r) denotes L(r).\nPrecedence: * is highest, concatenation is next, and | is lowest. All three are left associative.",
+      "explanation": "Some textbooks add the empty set to the basis as a third case, so mention it if your course does. + and ? are not part of the definition: they are shorthands that can be rewritten with these operators.",
+      "difficulty": "easy",
+      "tags": ["definitions", "precedence"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What are the differences between ε, {ε} and ∅?",
+      "back": "ε is a string of length 0. {ε} is a language containing that one string. ∅ is a language containing no strings.",
+      "tags": ["definitions"]
+    },
+    {
+      "front": "Give the precedence of the regular expression operators, from highest to lowest.",
+      "back": "*, then concatenation, then |. All three are left associative. + and ? have the same precedence as *.",
+      "tags": ["precedence"]
+    },
+    {
+      "front": "What is the difference between L* and L+?",
+      "back": "L* is zero or more strings from L joined together, so it always contains ε. L+ is one or more, so it contains ε only if L does.",
+      "tags": ["closure"]
+    },
+    {
+      "front": "What restriction makes a regular definition different from a grammar?",
+      "back": "Each definition may use only names defined before it. So it cannot be recursive, and every name can be substituted away.",
+      "tags": ["regular-definitions"]
+    },
+    {
+      "front": "Rewrite r+, r? and [a-c] using only |, concatenation and *.",
+      "back": "r+ is rr*, r? is r|ε, and [a-c] is a|b|c.",
+      "tags": ["shorthands"]
+    },
+    {
+      "front": "Name a language that regular expressions cannot describe, and say why.",
+      "back": "Balanced parentheses, or a^n b^n. A finite automaton has a fixed number of states, so it cannot keep an unlimited count.",
+      "tags": ["regular-languages", "limits"]
+    }
+  ]
+}

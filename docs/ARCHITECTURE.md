@@ -6,7 +6,7 @@ CompilerLab is an npm workspaces monorepo. It runs entirely on the student's com
 compilerlab/
   apps/web/          React app: shell, routes, design system
   apps/server/       Fastify API and SQLite storage
-  packages/engine/   Compiler-theory engine (starts in Milestone 2)
+  packages/engine/   Compiler-theory engine: pure TypeScript, no DOM or Node APIs
   packages/content/  Course content as data
   packages/shared/   Types, Zod schemas and constants
   scripts/           setup, doctor, start, build, backup, reset
@@ -34,15 +34,19 @@ Production (npm run build && npm run start:prod)
 
 `apps/server/src/app.ts` builds the Fastify app from its dependencies, so tests can run it with an in-memory database and a fake tool probe.
 
-| Route                            | Purpose                                                               |
-| -------------------------------- | --------------------------------------------------------------------- |
-| `GET /api/health`                | Liveness, version and database driver                                 |
-| `GET, PATCH /api/settings`       | Read and update settings                                              |
-| `POST /api/settings/reset`       | Restore default settings                                              |
-| `GET /api/content/modules[/:id]` | The course outline                                                    |
-| `GET /api/system/status`         | Node, lab tools, lab mode, whether a Gemini key exists, data location |
+| Route                               | Purpose                                                               |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| `GET /api/health`                   | Liveness, version and database driver                                 |
+| `GET, PATCH /api/settings`          | Read and update settings                                              |
+| `POST /api/settings/reset`          | Restore default settings                                              |
+| `GET /api/content/modules[/:id]`    | The course outline                                                    |
+| `GET /api/system/status`            | Node, lab tools, lab mode, whether a Gemini key exists, data location |
+| `GET /api/content/lessons`          | Every lesson's frontmatter                                            |
+| `GET /api/content/lessons/:id/bank` | A topic's questions, summary and flashcards                           |
+| `GET /api/progress`                 | Progress on all topics                                                |
+| `PATCH /api/progress/:id`           | Records that a topic was read, explored, or a quiz score              |
 
-Later milestones add `/api/lab`, `/api/ai`, `/api/progress` and `/api/export`.
+Later milestones add `/api/lab`, `/api/ai` and `/api/export`.
 
 **Errors.** `plugins/errors.ts` turns every failure into `{ error: { code, message, details? } }`. Messages are written for students, and internals stay in the server log.
 
@@ -83,6 +87,45 @@ Settings are stored one key per row and validated field by field on read. A corr
 **Accessibility.** The shell has a skip link, moves focus to the page and announces it on navigation, and honors `prefers-reduced-motion`. Primitives use native controls where possible, and the split pane resizes with the keyboard.
 
 **Failure states.** `ErrorPanel`, `RouteError` and error toasts always give a readable message and an Ask AI button. A polled health check shows a banner if the server stops.
+
+## Engine
+
+`packages/engine` runs in browser workers and on the server, and every algorithm returns a **trace**: an array of frozen snapshots, each with a title and a plain-language explanation. Bad input throws an `EngineError` holding a readable message, a position and a hint, and `attempt` turns that into a `Result`.
+
+| Folder     | Contains                                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `core`     | `Result`, `EngineError` and `TraceRecorder`                                                                                    |
+| `regex`    | Character sets and the regex parser, which keeps source positions                                                              |
+| `automata` | Thompson, subset construction, Hopcroft, followpos, simulation and an equivalence check that gives the shortest counterexample |
+| `lexer`    | The mini-Lex generator and scanner, the rule format, and the input buffer demo                                                 |
+
+Character classes stay practical because of **alphabet atoms**: `alphabetAtoms` splits every character set an automaton mentions into groups it cannot tell apart, and table construction runs per group rather than per code point.
+
+## Visualizers
+
+```text
+Visualizer component  ── useEngineJob ──▶ Web Worker: runJob ──▶ engine
+        │                 (cached by input)
+        ▼
+     Player  ── renderStage(step) ──▶ AutomatonGraph, tables, tape...
+        └──── stageExport.render(step) ──▶ the same drawing, static, as an image
+```
+
+- **`visualizers/engine`**: jobs run in a worker and always resolve, with a readable failure if the input is bad or takes over 10 seconds. Results are cached by input with TanStack Query.
+- **`visualizers/player`**: play, pause, step, scrub, speed, captions, keyboard shortcuts and export. Every visualizer gets all of these by passing a trace.
+- **`visualizers/graph`**: a layered layout and edge routing, computed from the finished automaton, so states stay put while it grows.
+- **`visualizers/registry.ts`**: the list of visualizers. Each is its own chunk, and `VisualizerHost` loads it on demand and contains any failure to its own panel.
+
+Exports are drawn by `renderToStaticMarkup`, with CSS variables written in as real colors. `react-dom/server` and `gifenc` load only when an export is requested.
+
+## Lessons
+
+A topic is two files: an MDX lesson and a JSON question bank (see [CONTENT_GUIDE.md](CONTENT_GUIDE.md)).
+
+- The server reads frontmatter and banks from disk on each request, so a new topic needs no restart. A broken file is skipped and logged, and `npm test` fails on it.
+- The web app compiles MDX through Vite and loads each lesson as its own chunk. Math is rendered at build time.
+- `routes/lesson.tsx` lays out the template in a split pane: the lesson on the left, with practice, quiz, summary and flashcards below it, and the visualizers on the right.
+- Progress lives in the `topic_progress` table and only moves forward. `@compilerlab/shared/progress` holds the completion rule and mastery formula.
 
 ## Environment checks
 

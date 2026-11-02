@@ -1,0 +1,240 @@
+---
+id: compiler-phases
+module: foundations
+title: The structure of a compiler
+order: 2
+estimatedMinutes: 30
+prerequisites:
+  - compiler-vs-interpreter
+outcomes:
+  - Explain the analysis and synthesis parts of a compiler and what passes between them
+  - List the phases in order, with the input and output of each
+  - Trace a simple assignment statement through every phase by hand
+  - Explain how the symbol table is used and how errors are handled across the phases
+visualizers:
+  - id: token-stream
+    label: Token stream
+    props:
+      source: "position = initial + rate * 60"
+      rules: |
+        ID     [A-Za-z_][A-Za-z0-9_]*  %identifier
+        NUMBER [0-9]+                  %literal
+        ASSIGN =                       %operator
+        PLUS   \+                      %operator
+        TIMES  \*                      %operator
+        WS     [ \t\n]+                %skip
+---
+
+## Why this matters
+
+A compiler is too big to understand as one block. So it is built as a sequence of **phases**: each phase has one job, takes the program in one form, and hands it to the next phase in a new form.
+
+This lesson is the map for the rest of the course, because Modules 1 to 6 follow these phases in order. If you can trace one statement through all of them, you will always know where a new topic fits.
+
+## Analysis and synthesis
+
+A compiler has to map a source program to a target program with the same meaning. That mapping has two parts.
+
+- The **analysis** part, or **front end**, breaks the source program into pieces and gives them a grammatical structure. From that structure it builds an **intermediate representation**, a form of the program that is internal to the compiler. It reports errors if the program is badly formed or does not make sense, and it collects information about names in a data structure called the **symbol table**.
+- The **synthesis** part, or **back end**, builds the target program from the intermediate representation and the symbol table.
+
+As a rule of thumb, the front end depends mainly on the source language, and the back end depends mainly on the target machine. That split saves a lot of work. To support 3 languages on 4 machines with one shared intermediate representation, you write 3 front ends and 4 back ends, which is 7 parts, instead of 12 separate compilers.
+
+<Callout kind="textbook" title="Where does optimization sit?">
+The Dragon Book places lexical, syntax and semantic analysis and intermediate code generation in the front end, and code generation in the back end. It describes machine-independent optimization as sitting between the two. Other books and many compiler projects call that part the "middle end", or count it in the back end. If an exam question depends on this, use your course's definition.
+</Callout>
+
+## The phases in order
+
+| # | Phase | Input | Output | Job |
+| --- | --- | --- | --- | --- |
+| 1 | Lexical analysis (scanning) | Character stream | Token stream | Group characters into lexemes and produce a token for each |
+| 2 | Syntax analysis (parsing) | Token stream | Syntax tree | Give the tokens a grammatical structure |
+| 3 | Semantic analysis | Syntax tree | Syntax tree with type information | Check meaning, especially types, and add conversions |
+| 4 | Intermediate code generation | Syntax tree | Intermediate representation | Produce a low-level, machine-like form |
+| 5 | Machine-independent code optimization | Intermediate representation | Intermediate representation | Improve the code without relying on the target machine |
+| 6 | Code generation | Intermediate representation | Target-machine code | Choose instructions, and registers or memory locations |
+| 7 | Machine-dependent code optimization | Target-machine code | Target-machine code | Improve the code using features of the target machine |
+
+A **syntax tree** is a tree where each interior node is an operation and its children are that operation's arguments. **Three-address code**, a common intermediate representation, is a sequence of simple assembly-like instructions. You will see both in the worked example.
+
+"Optimization" here is a misleading word. It means improving the code, usually to make it faster, and sometimes to make it shorter or use less power. No compiler can promise that the result is the best possible.
+
+<Callout kind="textbook" title="Six phases or seven?">
+The Dragon Book's diagram has seven boxes, as in the table above, and it says optimization is optional, so an optimizer may be missing. Many courses and question papers say "six phases" by counting code optimization once. These describe the same compiler. Check which count your course uses.
+</Callout>
+
+### The symbol table
+
+The **symbol table** holds one record for each name in the program, with fields for what the compiler knows about that name: its type, where it is stored, and its scope (the part of the program where it can be used). For a procedure name, it also holds the number and types of the arguments, how each is passed, and the return type.
+
+Every phase can use it. The front end fills it in and checks against it, and the back end reads it to generate code. It must allow the compiler to find a name's record quickly, because this happens constantly.
+
+<Callout kind="textbook" title="Who creates symbol-table entries?">
+The Dragon Book's opening example has the lexer return pointers to symbol-table entries. Later, the book has the parser create entries, because a parser knows the program's structure and can better tell different declarations of a name apart. Both designs are used. Do not treat "the lexer creates the symbol table" as a fixed rule.
+</Callout>
+
+### Error handling
+
+Any phase can run into errors, and the right response is not to stop at the first one. A compiler should report the error clearly, recover, and keep going, so one compile can reveal several mistakes.
+
+| Kind of error | Example | Found by |
+| --- | --- | --- |
+| Lexical | A stray `@` in C, which cannot begin any token | Lexical analysis |
+| Syntax | The missing parenthesis in `x = (1 + 2;` | Syntax analysis |
+| Semantic | A floating-point number used as an array index | Semantic analysis |
+| Logical | Writing `=` where `==` was meant, in C | Often nothing, because the program is still valid |
+
+The syntax and semantic phases usually find most of the errors a compiler can detect. Logical errors show the limit: the compiler checks that a program is valid, not that it does what you meant.
+
+<Callout kind="textbook" title="Is there an error-handler box?">
+Many course diagrams draw an "error handler" beside the symbol table, connected to every phase. The Dragon Book's second edition diagram shows only the symbol table, and the book discusses error handling separately. The idea is the same either way. Use your course's diagram if you are asked to draw one.
+</Callout>
+
+### Phases and passes
+
+Phases describe the logical design. A **pass** describes the implementation: one read of an input file and one write of an output file. Several phases can share a pass. For example, lexical, syntax and semantic analysis and intermediate code generation might all run in one pass, with the lexer called on demand by the parser.
+
+## Worked example
+
+Follow this statement, the Dragon Book's running example, through every phase. Assume `position`, `initial` and `rate` were declared as floating-point numbers. The lexeme `60` by itself is an integer.
+
+```text
+position = initial + rate * 60
+```
+
+### 1. Lexical analysis
+
+The lexer groups the 30 characters into 7 lexemes and throws away the spaces. Press play in the visualizer and watch it happen. The tool names its tokens `ID`, `ASSIGN`, `PLUS`, `TIMES` and `NUMBER` and shows each lexeme, but the idea is the same as the table below.
+
+| Lexeme | Token | Why |
+| --- | --- | --- |
+| `position` | `⟨id, 1⟩` | `id` is the token name, and 1 points at its symbol-table entry |
+| `=` | `⟨=⟩` | Needs no attribute |
+| `initial` | `⟨id, 2⟩` | Points at entry 2 |
+| `+` | `⟨+⟩` | Needs no attribute |
+| `rate` | `⟨id, 3⟩` | Points at entry 3 |
+| `*` | `⟨*⟩` | Needs no attribute |
+| `60` | `⟨60⟩` | See the note below |
+
+The symbol table holds these names. Their types come from the declarations we assumed above.
+
+| Entry | Name | Type |
+| --- | --- | --- |
+| 1 | `position` | float |
+| 2 | `initial` | float |
+| 3 | `rate` | float |
+
+<Callout kind="textbook" title="The token for 60">
+The Dragon Book writes `⟨60⟩` here to keep the example simple, and it points out that a proper token would look more like `⟨number, 4⟩`, with 4 pointing at an entry for the value. The short form is a simplification, not a rule that numbers have no attribute.
+</Callout>
+
+<TryIt visualizer="token-stream" source="position=initial+rate*60" rules="ID     [A-Za-z_][A-Za-z0-9_]*  %identifier
+NUMBER [0-9]+                  %literal
+ASSIGN =                       %operator
+PLUS   \+                      %operator
+TIMES  \*                      %operator
+WS     [ \t\n]+                %skip">Run it without the spaces</TryIt>
+
+You get the same 7 tokens, because the spaces only separated the lexemes.
+
+### 2. Syntax analysis
+
+The parser uses the token names to build a syntax tree. Below, `id1` is short for `⟨id, 1⟩`.
+
+```text
+      =
+     / \
+  id1   +
+       / \
+    id2   *
+         / \
+      id3   60
+```
+
+The shape records the order of the operations. Multiplication binds tighter than addition, so `*` sits deepest and happens first. Then comes `+`, and the assignment is done last, at the root.
+
+### 3. Semantic analysis
+
+The type checker walks the tree and finds `*` applied to a float (`rate`) and an integer (`60`). The language allows this if the integer is converted, so the checker inserts a conversion. Such an automatic conversion is called a **coercion**.
+
+```text
+      =
+     / \
+  id1   +
+       / \
+    id2   *
+         / \
+      id3   inttofloat
+                |
+                60
+```
+
+### 4. Intermediate code generation
+
+The tree becomes three-address code. Each instruction does at most one operation, and the compiler makes up **temporary names** `t1`, `t2` and `t3` to hold the results along the way.
+
+```text
+t1 = inttofloat(60)
+t2 = id3 * t1
+t3 = id2 + t2
+id1 = t3
+```
+
+Compare this with the tree: each interior node became one instruction, and the deepest ones came first.
+
+### 5. Code optimization
+
+The optimizer makes two improvements:
+
+- The conversion of `60` can be done now, at compile time, so `inttofloat(60)` is replaced by the constant `60.0`.
+- `t3` is used only once, to pass its value to `id1`, so it can be removed.
+
+```text
+t1 = id3 * 60.0
+id1 = id2 + t1
+```
+
+### 6. Code generation
+
+The code generator assigns registers and picks instructions. Using registers `R1` and `R2`, the result might be:
+
+| Instruction | What it does |
+| --- | --- |
+| `LDF R2, id3` | Load `rate` into `R2` |
+| `MULF R2, R2, #60.0` | Multiply `R2` by the constant 60.0, and put the result in `R2` |
+| `LDF R1, id2` | Load `initial` into `R1` |
+| `ADDF R1, R1, R2` | Add `R2` to `R1`, and put the result in `R1` |
+| `STF id1, R1` | Store `R1` into `position` |
+
+The first operand of each instruction is its destination, the `F` means floating-point, and `#` marks a constant value. The Dragon Book's trace stops here. A machine-dependent optimizer, if there is one, would work on this code next.
+
+### What lexing cannot see
+
+The lexer only finds errors at the level of characters. Compare these two inputs in the visualizer.
+
+<TryIt visualizer="token-stream" source="position = initial @ rate * 60" rules="ID     [A-Za-z_][A-Za-z0-9_]*  %identifier
+NUMBER [0-9]+                  %literal
+ASSIGN =                       %operator
+PLUS   \+                      %operator
+TIMES  \*                      %operator
+WS     [ \t\n]+                %skip">Try a stray @</TryIt>
+
+<TryIt visualizer="token-stream" source="= position initial 60 * + rate" rules="ID     [A-Za-z_][A-Za-z0-9_]*  %identifier
+NUMBER [0-9]+                  %literal
+ASSIGN =                       %operator
+PLUS   \+                      %operator
+TIMES  \*                      %operator
+WS     [ \t\n]+                %skip">Try the tokens in nonsense order</TryIt>
+
+The first gives a lexical error, because no rule matches `@`. The second gives 7 tokens and no complaint, because every piece is valid. Spotting that the order makes no sense is the parser's job.
+
+## Common mistakes
+
+- **Expecting the parser to check types.** `x = "abc" * 2` has a perfectly good structure, so it parses. Rejecting it is semantic analysis.
+- **Expecting `+` to happen first because it comes first.** The order comes from precedence, which the tree records, and not from reading left to right. Here `rate * 60` happens before the addition.
+- **Thinking `inttofloat` always appears.** It appears because `rate` is a float and `60` is an integer. If all the operands were integers, there would be no coercion at all.
+- **Thinking "three-address" means exactly three operands.** It means at most one operator on the right side. `id1 = t3` has only two addresses, and `t1 = inttofloat(60)` also has two.
+- **Thinking the syntax tree is not an intermediate representation.** It is one. A compiler may use several, and three-address code is just the lower-level one that comes later.
+- **Mixing up phases and passes.** A phase is a logical step. A pass is one trip through a file, and may include several phases.
+- **Thinking the symbol table belongs to the front end alone.** The back end reads it too, for example to find out a variable's type and storage.

@@ -1,0 +1,212 @@
+---
+id: language-processing-system
+module: foundations
+title: The language processing system
+order: 4
+estimatedMinutes: 25
+prerequisites:
+  - compiler-vs-interpreter
+outcomes:
+  - List the programs between a source file and a running process, in order
+  - Say what each program takes in and what it produces
+  - Use gcc's -E, -S and -c flags to stop after each stage and inspect the result
+  - Tell from an error message which stage reported it
+visualizers: []
+---
+
+## Why this matters
+
+Type `gcc main.c` and a program comes out, as if one tool did all the work. In fact several programs ran in sequence, each handing its output to the next. The compiler is only one of them.
+
+This matters as soon as something goes wrong. "No such file" and "undefined reference" are not compiler errors at all, and you will not fix them by staring at your C code. If you know which stage said what, you know where to look.
+
+## The pipeline
+
+The whole arrangement is called a **language processing system**. For a C program it looks like this.
+
+```text
+source program              main.c
+      |   preprocessor
+      v
+modified source program     main.i
+      |   compiler
+      v
+assembly program            main.s
+      |   assembler
+      v
+relocatable machine code    main.o
+      |   linker   <---     other object files and libraries
+      v
+executable program          app
+      |   loader
+      v
+program running in memory
+```
+
+### Preprocessor
+
+A **preprocessor** runs before the compiler and edits the source text. In C, the lines that start with `#` are for the preprocessor.
+
+- **File inclusion.** `#include` pastes in the contents of another file.
+- **Macro expansion.** `#define` sets up a shorthand, called a **macro**, and every use is replaced with its expansion.
+- **Conditional compilation.** `#ifdef` keeps or drops a block of code.
+
+It also removes comments. Its output is still C source, just with all of this resolved. The preprocessor does not understand types or expressions, which leads to one of the common mistakes below.
+
+### Compiler
+
+The **compiler** takes the modified source and produces an **assembly program**. All the phases of a compiler, from lexical analysis to code generation, happen here. Producing assembly rather than machine code is a design choice. Assembly language is easier to generate and easier to debug, and a separate tool can finish the job.
+
+### Assembler
+
+The **assembler** takes the assembly program and produces **relocatable machine code**, stored in an **object file**. This is real machine code, but with two things left open:
+
+- **Addresses are not final.** Each object file's code starts at offset 0, as if it were the only file. If two files both do this, they cannot both stay there.
+- **Some names are unresolved.** A call to a function in another file has no address yet. The object file holds a list of the names it defines and the names it needs.
+
+### Linker
+
+The **linker** takes one or more object files, plus libraries, and produces an **executable program**. It does two things:
+
+1. **Resolves external references.** Each name that a file needs is matched with a file that defines it.
+2. **Relocates code.** It decides where each piece goes in the final program, and it adjusts addresses to match.
+
+Linking can be **static**, where library code is copied into the executable, or **dynamic**, where the executable only records which **shared library** it needs, and the connection is made when the program is loaded or run.
+
+### Loader
+
+The **loader** is part of the operating system. When you launch a program, it copies the code and data from the executable into memory, sets up what the program needs to start, such as its stack, and jumps to the program's first instruction. If the executable uses shared libraries, they are brought in at this point as well.
+
+### Summary
+
+| Stage | Takes in | Produces | Form of the output |
+| --- | --- | --- | --- |
+| Preprocessor | Source program | Modified source program | Text |
+| Compiler | Modified source program | Assembly program | Text |
+| Assembler | Assembly program | Relocatable machine code | Binary |
+| Linker | Relocatable machine code and libraries | Executable program | Binary |
+| Loader | Executable program | Running program in memory | Not a file |
+
+<Callout kind="textbook" title="Different ways to draw it">
+The Dragon Book's diagram of this system draws one "Linker/Loader" box, and it says a compiler may produce assembly, so that step is not universal. Real tools vary: GCC runs preprocessing inside its compiler program, and Clang normally assembles internally without writing a separate assembly file. The stages are still a correct description of the logical steps.
+</Callout>
+
+## Worked example
+
+Take a program with two source files.
+
+```c
+/* main.c */
+#include <stdio.h>
+#define LIMIT 5
+
+int square(int n);   /* defined in square.c */
+
+int main(void) {
+    printf("%d\n", square(LIMIT));
+    return 0;
+}
+```
+
+```c
+/* square.c */
+int square(int n) {
+    return n * n;
+}
+```
+
+The `gcc` command is a **driver**: a program that runs each of the stages for you. These flags tell it where to stop.
+
+| Flag | Stop after | Output file |
+| --- | --- | --- |
+| `-E` | Preprocessing | Standard output, unless `-o` names a file |
+| `-S` | Compiling | `main.s` |
+| `-c` | Assembling | `main.o` |
+
+Let us go one stage at a time. Clang accepts the same three flags.
+
+**Stage 1: preprocess.**
+
+```text
+gcc -E main.c -o main.i
+```
+
+Open `main.i` and you will find that the `#include` line has become many lines of declarations from `stdio.h`, including the declaration of `printf`. The comments are gone, and `LIMIT` has been replaced.
+
+```c
+int square(int n);
+
+int main(void) {
+    printf("%d\n", square(5));
+    return 0;
+}
+```
+
+You will also see some lines starting with `#` that record file names and line numbers, so that later error messages can point to your original code.
+
+**Stage 2: compile.**
+
+```text
+gcc -S main.i
+```
+
+This writes `main.s`, which is readable assembly language for your machine. The details vary by processor, but you will find instructions that call `square` and `printf` by name.
+
+**Stage 3: assemble.**
+
+```text
+gcc -c main.s
+```
+
+This writes `main.o`, which is binary. It is not a program you can run. On Linux, the `nm` tool lists its names:
+
+```text
+nm main.o
+```
+
+`main` is listed as defined, while `printf` and `square` are marked `U`, for undefined. The assembler had no way of knowing where they are.
+
+**Stage 4: build the other file.** The `-c` flag runs every stage up to and including the assembler, so this one command does stages 1 to 3 for `square.c`.
+
+```text
+gcc -c square.c
+```
+
+**Stage 5: link.**
+
+```text
+gcc main.o square.o -o app
+```
+
+The linker finds `square` in `square.o`. It finds `printf` in the C library, which `gcc` links in automatically. There are now no unresolved names, so `app` can be written.
+
+**Stage 6: load and run.**
+
+```text
+./app
+```
+
+The operating system's loader puts `app` in memory and starts it, and the program prints `25`.
+
+### Which stage reported this?
+
+Each stage reports its own kind of problem.
+
+| You see | Stage | Why |
+| --- | --- | --- |
+| `fatal error: nosuch.h: No such file or directory` | Preprocessor | `#include` cannot find the file |
+| `error: expected ';' before 'return'` | Compiler | A syntax error in the C code |
+| ``undefined reference to `square'`` | Linker | Nothing being linked defines `square` |
+| `error while loading shared libraries` | Loader | A shared library is missing when the program starts |
+
+You can see the third one by leaving out `square.o` in stage 5: `gcc main.o -o app`. The compile of `main.c` was fine, because the declaration `int square(int n);` promised that the function exists somewhere. It is the linker that finds out it does not.
+
+## Common mistakes
+
+- **Thinking `#include <stdio.h>` adds the code for `printf`.** It adds only the declaration, which tells the compiler how to call `printf`. The code itself is in the C library, and it reaches your program through the linker.
+- **Thinking the preprocessor understands C.** It replaces text. With `#define SQUARE(x) x * x`, `SQUARE(1 + 2)` becomes `1 + 2 * 1 + 2`, which is 5 and not 9. The usual fix is parentheses: `#define SQUARE(x) ((x) * (x))`.
+- **Blaming the compiler for a linker error.** "Undefined reference" means your code compiled, and that the definition was not found at link time.
+- **Trying to run a `.o` file.** It is machine code, but it has unresolved names and no final addresses. The linker has to finish it first.
+- **Mixing up `-S` and `-c`.** Capital `-S` gives assembly, a text file ending in `.s`. Lowercase `-c` gives an object file, a binary ending in `.o`.
+- **Thinking `gcc` is the compiler and does it all.** `gcc` is a driver that runs the separate stages. Only the second stage is the compiler in the sense of this course.
+- **Expecting `gcc` to run the loader.** The build ends once the executable is written. The loader runs later, each time you start the program.

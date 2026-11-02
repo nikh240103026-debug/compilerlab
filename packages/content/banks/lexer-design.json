@@ -1,0 +1,266 @@
+{
+  "summary": [
+    "A lexer combines all its patterns into one automaton: a new start state with ε-edges into each pattern's NFA, converted to a single DFA whose accepting states announce a pattern.",
+    "From the start of each lexeme it simulates the DFA until no move remains or the input ends, remembering the last accepting position and rule, and then backs up to that position.",
+    "Two rules settle every ambiguity, in this order: take the longest match, and on a tie take the rule listed first.",
+    "Keywords are handled either by listing a rule for each one before the identifier rule, or by using one identifier rule and looking the lexeme up in a reserved-word table.",
+    "A table-driven lexer is a fixed loop plus generated tables, while a hand-coded lexer spells out the same automaton as code, trading easy regeneration for direct control."
+  ],
+  "practice": [
+    {
+      "id": "trace-aa-back-up",
+      "type": "short",
+      "prompt": "A lexer has the rules a, abb and a*b+, in that order. Trace it on the input aa. Say what it reads, what it remembers, and which tokens it emits.",
+      "hint": "After the second a, is the DFA in a state that announces any rule? What does the lexer do when the input ends there?",
+      "solution": "Read a: the text matches a, so remember the match a by rule 1.\nRead a: aa is not a match for any rule, but a*b+ could still match if a b comes, so keep going. The remembered match stays the same.\nThe input ends. Back up one character and emit a by rule 1.\nThe second a is scanned the same way and emitted by rule 1.\n\nResult: two tokens, a and a.",
+      "explanation": "The lexer read past its best match while hoping for a longer one, which is why it must remember the last accepting position. Rejecting the whole input as an error is the tempting wrong answer: no rule matches aa as a whole, but a prefix of it matches, and that is all the lexer needs.",
+      "difficulty": "medium",
+      "tags": ["longest-match", "back-up"],
+      "exams": ["university"]
+    },
+    {
+      "id": "regex-number",
+      "type": "regex",
+      "prompt": "Write a pattern for an unsigned number: one or more digits, then an optional fraction (a dot and one or more digits), then an optional exponent (E, an optional + or -, and one or more digits).",
+      "reference": "[0-9]+(\\.[0-9]+)?(E[-+]?[0-9]+)?",
+      "accepts": ["7", "3.14", "6E23", "6.02E+23", "1E-9"],
+      "rejects": ["", ".5", "3.", "1E", "1E+", "E5", "1.2.3"],
+      "hint": "Build it from three parts, and make the last two optional as whole groups. Remember that a dot on its own means any character.",
+      "solution": "[0-9]+(\\.[0-9]+)?(E[-+]?[0-9]+)?",
+      "explanation": "The fraction and the exponent are each optional as a group, so a dot must have digits after it and an E must have digits after it. Writing [0-9]+\\.?[0-9]* is wrong because it accepts 3., and an unescaped dot would accept any character. This pattern is also why lexers back up: on 1E+x the DFA reads past the last match while hoping for an exponent.",
+      "difficulty": "medium",
+      "tags": ["regex", "numbers"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "regex-relational-operators",
+      "type": "regex",
+      "prompt": "Write one pattern that matches exactly the operators <, <=, >, >=, == and !=.",
+      "reference": "<=|>=|==|!=|<|>",
+      "accepts": ["<", ">", "<=", ">=", "==", "!="],
+      "rejects": ["", "=", "!", "<>", "=<"],
+      "hint": "A union of the six operators is enough. Is there a shorter way to write the ones that share a first character?",
+      "solution": "<=|>=|==|!=|<|>",
+      "explanation": "The order inside the union does not matter, because the DFA tracks every alternative at once and longest match takes care of < against <=. A shorter equivalent is (<|>)=?|==|!=. A class like [<>=!]=? is the tempting wrong answer, because it also accepts = and !, which are not in the list.",
+      "difficulty": "easy",
+      "tags": ["regex", "operators"],
+      "exams": ["university"]
+    },
+    {
+      "id": "fix-rule-order",
+      "type": "short",
+      "prompt": "A student writes these rules, in this order:\n\nID  [a-z]+\nIF  if\nGT  >\nGE  >=\n\nThe student worries that IF and GE can never match. Is each worry right? Fix the rules if needed.",
+      "hint": "For each pair, ask whether the two rules can match the same text, or only different lengths.",
+      "solution": "IF: the worry is right. On if, ID and IF tie at two characters, and ID is listed first, so IF can never match. Move IF above ID.\n\nGE: the worry is wrong. On >=, GE matches two characters and GT only one, so longest match picks GE whatever the order.",
+      "explanation": "Rule order only breaks ties between matches of the same length. It is tempting to say that a specific rule must always come first, but that only applies when a general rule can match all the same text, as ID can for IF.",
+      "difficulty": "medium",
+      "tags": ["rule-priority", "longest-match"],
+      "exams": ["university"]
+    },
+    {
+      "id": "no-overall-split",
+      "type": "mcq",
+      "prompt": "A lexer has the rules a, ab and bc. What does it do with the input abc?",
+      "options": [
+        "It emits a, then bc",
+        "It emits ab, then reports an error at c",
+        "It reports an error at a",
+        "It emits abc as one token"
+      ],
+      "answer": 1,
+      "hint": "Apply the longest-match rule at position 0, and then just carry on from where that leaves you.",
+      "solution": "It emits ab, then reports an error at c.",
+      "explanation": "The longest match at the start is ab, and the lexer commits to it. It never goes back to try a shorter match, even though a followed by bc would have used all the input. No rule matches abc as a whole, and a prefix does match, so there is no error at a.",
+      "difficulty": "medium",
+      "tags": ["longest-match", "errors"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "count-tokens-book-rules",
+      "type": "mcq",
+      "prompt": "A lexer has the rules a, abb and a*b+, in that order. How many tokens does it produce for the input abbaabba?",
+      "options": ["2", "3", "4", "5"],
+      "answer": 1,
+      "hint": "Find the longest match at the start, cut it off, and repeat on what remains.",
+      "solution": "3 tokens: abb, aabb and a.",
+      "explanation": "abb is the longest match at the start, since abba matches nothing. Then aabb matches a*b+, and aabba matches nothing. The last a matches the first rule. Answering 2 takes aabba as one token, and 4 or 5 comes from stopping at shorter matches such as a or ab.",
+      "difficulty": "medium",
+      "tags": ["longest-match", "counting"],
+      "exams": ["GATE"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "aaba-tokens",
+      "type": "mcq",
+      "prompt": "A lexer has the rules a, abb and a*b+, in that order. Which tokens does it produce for the input aaba?",
+      "options": ["a, a, b, a", "a, ab, a", "aab, a", "aaba"],
+      "answer": 2,
+      "hint": "Find the longest prefix of aaba that matches any one rule.",
+      "solution": "aab, then a.",
+      "explanation": "aab matches a*b+, and it is longer than a. Then a is all that remains, and it matches the first rule. The first option has a b on its own, which a*b+ does match, but it stops too soon: longest match never lets a shorter match win. a, ab, a also starts with too short a match, and aaba as a whole matches no rule.",
+      "difficulty": "easy",
+      "tags": ["longest-match"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "abb-priority",
+      "type": "mcq",
+      "prompt": "A lexer has the rules a, abb and a*b+, in that order. Which rule produces the token for the input abb?",
+      "options": ["a", "abb", "a*b+", "None, because two rules match and that is an error"],
+      "answer": 1,
+      "hint": "Two rules match all three characters. What breaks the tie?",
+      "solution": "abb",
+      "explanation": "abb and a*b+ both match all three characters, so the rule listed first wins. The rule a matches only one character, so longest match has already ruled it out. Two rules matching the same text is not an error: priority exists to settle exactly this.",
+      "difficulty": "easy",
+      "tags": ["rule-priority"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "iffy-longest-match",
+      "type": "mcq",
+      "prompt": "The rules are IF for if, listed first, and then ID for [a-z]+. What does the lexer produce for iffy?",
+      "options": [
+        "IF for if, then ID for fy",
+        "IF for if, then an error",
+        "An ambiguity error",
+        "ID for iffy"
+      ],
+      "answer": 3,
+      "hint": "Which is checked first, the length of a match or the order of the rules?",
+      "solution": "ID for iffy.",
+      "explanation": "ID matches four characters and IF only two, so longest match decides, and rule order is never consulted. Splitting off if is the tempting answer if you think of the rules as being tried in order and stopping at the first success. Lexers do not treat this as an ambiguity.",
+      "difficulty": "easy",
+      "tags": ["longest-match", "keywords"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "id-before-if",
+      "type": "mcq",
+      "prompt": "The rules are ID for [a-z]+, listed first, and then IF for if. What does the lexer produce for if?",
+      "options": [
+        "IF, because keywords always win",
+        "ID, because the tie goes to the rule listed first",
+        "Both IF and ID",
+        "An error, because the rules conflict"
+      ],
+      "answer": 1,
+      "hint": "Both rules match the same two characters.",
+      "solution": "ID, because the tie goes to the rule listed first.",
+      "explanation": "Keywords have no special status in the rules. The only thing that makes a keyword win is being listed first, so here IF can never match. A lexer emits one token per lexeme, and this is a mistake in the rules, not an error it reports while scanning, although tools like Flex warn about it when building the lexer.",
+      "difficulty": "easy",
+      "tags": ["rule-priority", "keywords"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "when-scan-stops",
+      "type": "mcq",
+      "prompt": "When does the DFA simulation for one lexeme stop?",
+      "options": [
+        "When it reaches an accepting state",
+        "When it reaches the next whitespace character",
+        "When it has no move on the next character, or the input ends",
+        "When it has read as many characters as the longest pattern"
+      ],
+      "answer": 2,
+      "hint": "What must be true for the lexer to be sure no longer match exists?",
+      "solution": "When it has no move on the next character, or the input ends.",
+      "explanation": "Stopping at the first accepting state would miss longer matches, such as stopping at a in aab. Whitespace is just another character, and in many languages no whitespace separates tokens, as in x=1. Many patterns have no longest string at all, such as [a-z]+.",
+      "difficulty": "easy",
+      "tags": ["simulation"],
+      "exams": ["university"]
+    },
+    {
+      "id": "why-remember-accept",
+      "type": "mcq",
+      "prompt": "Why does a lexer record the last accepting position while it scans?",
+      "options": [
+        "It may read past its best match, and has to return to it",
+        "So it can report line numbers in errors",
+        "So the parser can undo a token",
+        "To avoid reading the same character twice"
+      ],
+      "answer": 0,
+      "hint": "Think about the input 1E+x, with a pattern that allows an exponent.",
+      "solution": "It may read past its best match, and has to return to it.",
+      "explanation": "On 1E+x the DFA reads E and + while hoping for an exponent, and then gets stuck in a state that announces nothing. The remembered position tells it to emit 1 and restart at E. Line numbers are tracked separately, the parser never undoes tokens, and backing up means reading those characters twice, which is the opposite of the last option.",
+      "difficulty": "medium",
+      "tags": ["back-up"],
+      "exams": ["university"]
+    },
+    {
+      "id": "reserved-word-table-benefit",
+      "type": "mcq",
+      "prompt": "What is the main benefit of a reserved-word table over a separate rule for each keyword?",
+      "options": [
+        "It makes the longest-match rule unnecessary",
+        "It lets a program use keywords as variable names",
+        "It makes keywords case-insensitive",
+        "It keeps the automaton smaller, because keywords add no states"
+      ],
+      "answer": 3,
+      "hint": "Compare what each approach adds to the DFA.",
+      "solution": "It keeps the automaton smaller, because keywords add no states.",
+      "explanation": "One identifier rule stays one identifier rule, however many keywords there are, and the cost moves to one table lookup per identifier. Longest match is still needed to read the whole word. Keywords stay reserved, because the lookup turns them into keyword tokens. Case handling is a separate choice that the table does not decide.",
+      "difficulty": "medium",
+      "tags": ["keywords"],
+      "exams": ["university"]
+    },
+    {
+      "id": "state-holds-two-accepts",
+      "type": "mcq",
+      "prompt": "In a lexer's combined DFA, one state's set of NFA states includes the accepting states of rule 2 and rule 5. Which rule does that state announce?",
+      "options": ["Rule 2", "Rule 5", "Whichever pattern is longer", "Both, as two tokens"],
+      "answer": 0,
+      "hint": "If the DFA is in this state, how long is the match for each of the two rules?",
+      "solution": "Rule 2.",
+      "explanation": "Both rules match the same text, because the DFA reached this state by reading it, so the lengths are equal and longest match cannot help. Priority then picks the rule listed first. The length of the patterns as written has no effect, and a lexeme produces one token.",
+      "difficulty": "medium",
+      "tags": ["rule-priority", "combined-automaton"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "explain-table-vs-hand-coded",
+      "type": "short",
+      "prompt": "Compare table-driven and hand-coded lexers. Give one advantage of each.",
+      "hint": "Think about who writes the automaton, and what happens when you want to change a token or improve an error message.",
+      "solution": "A table-driven lexer is a fixed loop plus generated tables. Its advantage is that tokens are easy to change and hard to get wrong: edit a pattern and regenerate.\n\nA hand-coded lexer spells out the automaton in code. Its advantage is direct control, such as tuning speed and giving specific error messages.",
+      "explanation": "Both implement the same kind of automaton, so neither recognizes a larger class of tokens. A good answer names a real trade-off instead of saying one is simply faster, because that depends on the lexer and the generator.",
+      "difficulty": "easy",
+      "tags": ["implementation"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What are the two rules that settle lexer ambiguity, and in what order do they apply?",
+      "back": "First longest match: take the longest prefix that matches any pattern. Then rule priority: on a tie, take the rule listed first.",
+      "tags": ["longest-match", "rule-priority"]
+    },
+    {
+      "front": "How does a lexer combine many patterns into one NFA?",
+      "back": "It adds one new start state with an ε-edge to the start state of each pattern's NFA, and labels each accepting state with its pattern.",
+      "tags": ["combined-automaton"]
+    },
+    {
+      "front": "When does a lexer stop scanning one lexeme, and what does it do then?",
+      "back": "It stops when the DFA has no move on the next character or the input ends. It then backs up to the last accepting position and emits the token that state announced.",
+      "tags": ["simulation", "back-up"]
+    },
+    {
+      "front": "What are the two ways to separate keywords from identifiers?",
+      "back": "List a rule for each keyword before the identifier rule, or use one identifier rule and look each lexeme up in a reserved-word table.",
+      "tags": ["keywords"]
+    },
+    {
+      "front": "With the rules a, abb and a*b+, what are the tokens for aaba?",
+      "back": "aab, by a*b+, and then a, by the rule a.",
+      "tags": ["worked-example"]
+    },
+    {
+      "front": "Why does minimizing a lexer's DFA start with more than two groups?",
+      "back": "Accepting states that announce different tokens must never merge, so the first partition has one group per token, plus one for states that announce nothing.",
+      "tags": ["minimization"]
+    }
+  ]
+}

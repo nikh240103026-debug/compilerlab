@@ -1,11 +1,17 @@
-import type { CourseModule } from '@compilerlab/shared';
+import type { CourseModule, LessonSummary } from '@compilerlab/shared';
 import type { Params } from 'react-router';
 import { useMatches } from 'react-router';
+import { useLessons } from '@/hooks/use-lessons';
 import { useModules } from '@/hooks/use-system';
 
 export interface RouteHandle {
   crumb:
-    string | ((context: { params: Params; modules: readonly CourseModule[] }) => string | null);
+    | string
+    | ((context: {
+        params: Params;
+        modules: readonly CourseModule[];
+        lessons: readonly LessonSummary[];
+      }) => string | null);
 }
 
 export interface Crumb {
@@ -17,10 +23,12 @@ export interface Crumb {
 export function useCrumbs(): Crumb[] {
   const matches = useMatches();
   const { data: modules = [] } = useModules();
+  const { data: lessons = [] } = useLessons();
   return matches.flatMap((match) => {
     const crumb = (match.handle as RouteHandle | undefined)?.crumb;
     if (!crumb) return [];
-    const label = typeof crumb === 'function' ? crumb({ params: match.params, modules }) : crumb;
+    const label =
+      typeof crumb === 'function' ? crumb({ params: match.params, modules, lessons }) : crumb;
     return label ? [{ label, to: match.pathname }] : [];
   });
 }

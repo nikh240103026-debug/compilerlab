@@ -2,7 +2,7 @@
 
 Learn Compiler Design from theory to practice on your own computer: lessons, step-by-step visualizers, real Lex, Yacc, C and C++ labs, exam practice and an AI tutor. Everything runs locally. The only network call the app will ever make is to the Gemini API, and it stays fully usable without one.
 
-**Status:** Milestone 1 of 12 is complete, which covers the foundation: setup, the app shell, settings and storage. Lessons and visualizers start in Milestone 2. See [the milestones](docs/SPEC.md#part-14-milestones-give-these-to-claude-code-one-at-a-time).
+**Status:** Milestones 1 and 2 of 12 are complete. The foundation is in place, along with the regex and automata engine, a lexer generator, eight step-by-step visualizers, and the lessons for Modules 0 and 1. The lab with real flex and gcc is next, in Milestone 3. See [the milestones](docs/SPEC.md#part-14-milestones-give-these-to-claude-code-one-at-a-time).
 
 ## Quick start
 
@@ -58,6 +58,8 @@ The lab tools can come from either place:
 - **WSL2** means running all of CompilerLab inside Ubuntu, because Windows programs cannot see tools installed in WSL. Run `wsl --install -d Ubuntu`, then clone the project inside Ubuntu and follow the Ubuntu steps below.
 
 Close and reopen your terminal after changing PATH.
+
+If git reports `Filename too long`, the project is in a deeply nested folder. Move it somewhere shorter, or run `git config core.longpaths true` in the project.
 
 ### macOS
 

@@ -1,0 +1,107 @@
+---
+id: role-of-the-lexer
+module: lexical-analysis
+title: The role of the lexer
+order: 1
+estimatedMinutes: 15
+prerequisites:
+  - compiler-phases
+outcomes:
+  - Explain what a lexer does and where it sits in a compiler
+  - Describe how the lexer and parser work together
+  - Give three reasons to keep lexing separate from parsing
+  - List the extra jobs a lexer does besides producing tokens
+visualizers:
+  - id: token-stream
+    label: Token stream
+    props:
+      source: "E = M * C ** 2"
+      rules: |
+        ID     [A-Za-z_][A-Za-z0-9_]*  %identifier
+        NUMBER [0-9]+                  %literal
+        EXP    \*\*                    %operator
+        MULT   \*                      %operator
+        ASSIGN =                       %operator
+        WS     [ \t\n]+                %skip
+---
+
+## Why this matters
+
+To you, `count = count + 1;` is a handful of words and symbols. To a compiler, it is just 18 characters in a row: `c`, `o`, `u`, `n`, `t`, a space, and so on. Nothing in that stream says where one word ends and the next begins.
+
+The grammar of a language is written in terms of words like *identifier* and *number*, never in terms of individual letters. So something has to turn the characters into words before parsing can begin. That something is the **lexical analyzer**, usually called the **lexer** or **scanner**. It is the first phase of the compiler, and the only one that reads the source text directly.
+
+## What the lexer does
+
+The lexer reads characters and groups them into meaningful chunks called **lexemes**. For each lexeme, it produces a **token**: a small record that says what kind of thing the lexeme is, and carries any extra detail the later phases need.
+
+Press play in the visualizer. Watch it read one character at a time, and notice that it emits a token only once it is sure the token has ended.
+
+### Working with the parser
+
+The lexer usually does not convert the whole file up front. It runs on demand. Each time the parser needs another token, it calls a function, traditionally named `getNextToken`, and the lexer reads just enough characters to produce one.
+
+| Who | Does what |
+| --- | --- |
+| Parser | "Give me the next token." |
+| Lexer | Reads characters until it has a complete lexeme, then returns its token. |
+| Both | Share the **symbol table**, where the lexer can record identifiers it finds. |
+
+### Other jobs it takes on
+
+Because the lexer is the only phase that sees the raw text, a few other tasks fall to it:
+
+- **Removing what the parser should not see.** Comments and whitespace (spaces, tabs, newlines) are read and thrown away.
+- **Tracking position.** It counts lines and columns, so an error found much later can still say "line 12, column 8."
+- **Reporting some errors.** A character that cannot begin any token, such as a stray `@` in C, is caught here.
+
+<Callout kind="note">
+Some compilers split this work in two: a *scanner* that does simple tasks such as deleting comments, and a *lexical analyzer* proper that produces tokens. Most of the time, the two names are used to mean the same thing.
+</Callout>
+
+### Why keep it separate from the parser?
+
+A parser could work directly on characters, but there are three good reasons not to.
+
+1. **Simpler design.** A grammar that had to mention every space and comment would be enormous. Removing them first keeps the parser's job clean.
+2. **Better speed.** A compiler spends a large share of its time reading characters. A separate lexer can be built around techniques that make this fast, such as the input buffering you will see later in this module.
+3. **Better portability.** Differences in how input is represented, such as character sets and line endings, can stay in the lexer, and the rest of the compiler never sees them.
+
+There is a fourth, practical benefit. Tokens can be described with regular expressions, and a tool can generate an efficient lexer from them automatically. That is what Lex and Flex do.
+
+## Worked example
+
+Take this Fortran-style assignment, a classic example from the Dragon Book:
+
+```text
+E = M * C ** 2
+```
+
+The lexer produces this stream. Each token is a pair: a **token name** the parser uses, and an **attribute value** that gives the details.
+
+| Lexeme | Token name | Attribute value |
+| --- | --- | --- |
+| `E` | `id` | pointer to the symbol-table entry for `E` |
+| `=` | `assign_op` | none needed |
+| `M` | `id` | pointer to the symbol-table entry for `M` |
+| `*` | `mult_op` | none needed |
+| `C` | `id` | pointer to the symbol-table entry for `C` |
+| `**` | `exp_op` | none needed |
+| `2` | `number` | the integer value 2 |
+
+Three things to notice:
+
+1. **The spaces are gone.** They separated the lexemes but produce no tokens.
+2. **`**` is one token, not two.** After reading the first `*`, the lexer has a valid match, but it reads on, because the longest possible match wins. Find this step in the visualizer: the scanner stops on `*`, keeps reading, and only then emits `EXP`.
+3. **`id` alone is not enough.** The parser needs only to know "an identifier goes here", but later phases must know which one. That is what the attribute is for.
+
+<TryIt visualizer="token-stream" source="E=M*C**2">Run it without the spaces</TryIt>
+
+Removing the spaces gives the same tokens, which shows that the spaces only separated the lexemes here. They carried no meaning of their own.
+
+## Common mistakes
+
+- **Thinking the lexer checks structure.** The lexer accepts `= 5 x ( ;` without complaint, because each piece is a valid token. Spotting that the *arrangement* is wrong is the parser's job.
+- **Thinking the lexer catches most errors.** It sees very little context. In `fi (a == b)`, the word `fi` is a perfectly good identifier as far as the lexer knows, even if you meant `if`.
+- **Picturing the lexer as a separate pass over the file.** It can be built that way, but it usually runs on demand, one token at a time, as the parser asks.
+- **Confusing the token and the lexeme.** `count` is a lexeme. `id` is its token name. The next topic makes this distinction precise.

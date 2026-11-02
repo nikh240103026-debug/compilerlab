@@ -1,0 +1,284 @@
+---
+id: regular-expressions
+module: lexical-analysis
+title: Regular expressions
+order: 4
+estimatedMinutes: 35
+prerequisites:
+  - tokens-lexemes-patterns
+outcomes:
+  - Define alphabet, string and language, and apply union, concatenation and Kleene closure to languages
+  - State the formal definition of a regular expression and read expressions using the precedence rules
+  - Use the algebraic laws to decide whether two regular expressions are equivalent
+  - Write regular definitions, and use the shorthands +, ? and character classes
+  - Explain why regular expressions cannot describe balanced parentheses
+visualizers:
+  - id: automaton-run
+    label: Test a regex
+    props:
+      regex: '(a|b)*abb'
+      text: 'aabb'
+      machine: dfa
+---
+
+## Why this matters
+
+The last lesson described the pattern for identifiers in words: "a letter followed by letters and digits". That is clear to a person, but a tool cannot use it.
+
+A **regular expression** says the same thing in a precise notation. For example, `[A-Za-z][A-Za-z0-9]*`. Regular expressions are short, they describe almost every token in a programming language, and a tool can turn one into a fast recognizer automatically. The rest of this module builds on them.
+
+## Strings and languages
+
+Everything rests on three definitions.
+
+- An **alphabet** is any finite set of symbols, usually written $\Sigma$. For example, $\{0, 1\}$ is the binary alphabet, and ASCII is another alphabet.
+- A **string** over an alphabet is a finite sequence of symbols from it. Its **length**, written $|s|$, is the number of symbols, so `banana` has length 6. The **empty string**, written $\epsilon$, has length 0.
+- A **language** is any countable set of strings over some fixed alphabet. All valid C programs form a language. So does the set $\{\epsilon\}$, and so does the empty set $\emptyset$. Nothing requires the strings to mean anything.
+
+Note that $\epsilon$, $\{\epsilon\}$ and $\emptyset$ are three different things: a string, a language containing one string, and a language containing no strings.
+
+Joining two strings is **concatenation**. If $x$ is `dog` and $y$ is `house`, then $xy$ is `doghouse`. The empty string changes nothing: $\epsilon s = s\epsilon = s$. Powers mean repeated concatenation: $s^0 = \epsilon$, and $s^i = s^{i-1}s$ for $i > 0$.
+
+## Operations on languages
+
+Three operations on languages are all that regular expressions need. A fourth, positive closure, is a handy shorthand.
+
+| Operation | Definition |
+| --- | --- |
+| Union | $L \cup M = \{ s \mid s \in L \text{ or } s \in M \}$ |
+| Concatenation | $LM = \{ st \mid s \in L \text{ and } t \in M \}$ |
+| Kleene closure | $L^* = \bigcup_{i=0}^{\infty} L^i$ |
+| Positive closure | $L^+ = \bigcup_{i=1}^{\infty} L^i$ |
+
+Here $L^0 = \{\epsilon\}$, and $L^i = L^{i-1}L$. In words, $L^*$ means "zero or more strings from $L$, joined together", and $L^+$ means "one or more".
+
+For a concrete example, let $L$ be the 52 upper- and lower-case letters, and let $D$ be the 10 digits. Each is a language of one-character strings.
+
+| Expression | Language |
+| --- | --- |
+| $L \cup D$ | The 62 letters and digits, as strings of length 1 |
+| $LD$ | The 520 strings made of one letter followed by one digit |
+| $L^4$ | All four-letter strings |
+| $L^*$ | All strings of letters, including $\epsilon$ |
+| $L(L \cup D)^*$ | All strings of letters and digits that begin with a letter |
+| $D^+$ | All strings of one or more digits |
+
+The fifth row is already the pattern for identifiers.
+
+## The formal definition
+
+A regular expression over an alphabet $\Sigma$ is built up in steps. Each expression $r$ denotes a language, written $L(r)$.
+
+**Basis.**
+
+1. $\epsilon$ is a regular expression, and $L(\epsilon) = \{\epsilon\}$.
+2. If $a$ is a symbol in $\Sigma$, then $a$ is a regular expression, and $L(a) = \{a\}$.
+
+**Induction.** If $r$ and $s$ are regular expressions, then so are these:
+
+| Expression | Language | Meaning |
+| --- | --- | --- |
+| $(r) \mid (s)$ | $L(r) \cup L(s)$ | union, or "either" |
+| $(r)(s)$ | $L(r)L(s)$ | concatenation, or "this, then that" |
+| $(r)^*$ | $(L(r))^*$ | Kleene closure, or "zero or more" |
+| $(r)$ | $L(r)$ | parentheses change nothing |
+
+A language that a regular expression can describe is called a **regular set**, or a **regular language**. Two expressions are **equivalent** if they denote the same language.
+
+Over the alphabet $\{a, b\}$, for example:
+
+| Expression | Language |
+| --- | --- |
+| `a\|b` | `{a, b}` |
+| `(a\|b)(a\|b)` | `{aa, ab, ba, bb}` |
+| `a*` | `{ε, a, aa, aaa, ...}` |
+| `(a\|b)*` | every string of `a`s and `b`s, including ε |
+| `a\|a*b` | `{a, b, ab, aab, aaab, ...}` |
+
+<Callout kind="textbook" title="Where is the empty set?">
+Many theory textbooks add $\emptyset$ to the basis as a third regular expression. The Dragon Book's basis has only $\epsilon$ and $a$, because nobody needs the empty language as a pattern in practice. The book does note that the theory treats $\emptyset$ as one extra regular expression, used only to define the empty language. If your course or exam uses that definition, nothing else in this lesson changes. The tool here has no symbol for $\emptyset$.
+</Callout>
+
+## Precedence
+
+Parentheses can be dropped by using these rules. All three operators are left associative.
+
+1. `*` binds tightest.
+2. Concatenation comes next.
+3. `|` binds loosest.
+
+So `a|b*c` means `(a)|((b)*(c))`: either an `a`, or any number of `b`s followed by a `c`.
+
+| Written | Means | In the language | Not in the language |
+| --- | --- | --- | --- |
+| `a\|b*c` | `(a)\|((b)*(c))` | `a`, `c`, `bbc` | `ac`, `b` |
+| `(a\|b*)c` | as written | `ac`, `c`, `bc` | `a` |
+| `ab*` | `(a)((b)*)` | `a`, `abb` | `abab` |
+| `(ab)*` | as written | ε, `ab`, `abab` | `aba` |
+| `ab\|c` | `(ab)\|(c)` | `ab`, `c` | `ac` |
+| `a(b\|c)` | as written | `ab`, `ac` | `c` |
+
+The visualizer builds a machine from an expression and runs it on a string, so you can test any row. Change the input string, and see whether the run ends in an accepting state.
+
+<TryIt visualizer="automaton-run" regex="a|b*c" text="bbc" machine="dfa">Test `a|b*c` on `bbc`</TryIt>
+
+<TryIt visualizer="automaton-run" regex="a|b*c" text="ac" machine="dfa">Test `a|b*c` on `ac`</TryIt>
+
+## Algebraic laws
+
+These laws hold for any regular expressions $r$, $s$ and $t$.
+
+| Law | What it says |
+| --- | --- |
+| `r\|s = s\|r` | `\|` is commutative |
+| `r\|(s\|t) = (r\|s)\|t` | `\|` is associative |
+| `r(st) = (rs)t` | concatenation is associative |
+| `r(s\|t) = rs\|rt` and `(s\|t)r = sr\|tr` | concatenation distributes over `\|` |
+| `εr = rε = r` | ε is the identity for concatenation |
+| `r* = (r\|ε)*` | ε is guaranteed in a closure |
+| `r** = r*` | `*` is idempotent: applying it twice changes nothing |
+
+Just as useful are the things that are *not* laws:
+
+- **Concatenation is not commutative.** `ab` and `ba` are different languages.
+- **`(a|b)*` is not `a*|b*`.** The first contains `ab`. The second contains only strings of all `a`s or all `b`s.
+- **`(a|b)*` is not `a*b*`.** The first contains `ba`. The second requires every `a` to come before every `b`.
+- **`(ab)*` is not `a*b*`.** The second contains `a`. The first does not.
+
+However, `(a|b)*` and `(a*b*)*` *are* equivalent, since each group `a*b*` can contribute a single `a` or a single `b`. Equivalent expressions produce the same minimal machine, apart from the names of its states, which you can check by switching the visualizer to Minimal DFA. A later topic explains why.
+
+<TryIt visualizer="automaton-run" regex="(a*b*)*" text="ba" machine="minimal">Minimal machine for `(a*b*)*`</TryIt>
+
+<TryIt visualizer="automaton-run" regex="(a|b)*" text="ba" machine="minimal">Minimal machine for `(a|b)*`</TryIt>
+
+## Regular definitions
+
+Long expressions are easier to read if parts of them have names. A **regular definition** is a sequence of definitions of this form:
+
+$$
+\begin{aligned}
+d_1 &\to r_1 \\
+d_2 &\to r_2 \\
+&\;\;\vdots \\
+d_n &\to r_n
+\end{aligned}
+$$
+
+Each $d_i$ is a new symbol, not in $\Sigma$ and different from the other $d$s. Each $r_i$ is a regular expression over $\Sigma \cup \{d_1, \ldots, d_{i-1}\}$. In other words, a definition can use only the names defined *before* it. So you can replace every name by its definition, working forward, and get a single ordinary regular expression. It also means a definition cannot refer to itself.
+
+Here are C identifiers:
+
+```text
+letter_ → A | B | ... | Z | a | b | ... | z | _
+digit   → 0 | 1 | ... | 9
+id      → letter_ ( letter_ | digit )*
+```
+
+And unsigned numbers, such as `5280`, `0.01234`, `6.336E4` and `1.89E-4`:
+
+```text
+digit            → 0 | 1 | ... | 9
+digits           → digit digit*
+optionalFraction → . digits | ε
+optionalExponent → ( E ( + | - | ε ) digits ) | ε
+number           → digits optionalFraction optionalExponent
+```
+
+## Shorthands
+
+Three extensions make expressions shorter. They add no power, because each can be rewritten using only the operators above.
+
+| Shorthand | Means | Same as |
+| --- | --- | --- |
+| `r+` | one or more of `r` | `rr*`, or `r*r` |
+| `r?` | zero or one of `r` | `r\|ε` |
+| `[abc]` | any one of the listed characters | `a\|b\|c` |
+| `[a-z]` | any one character in the range | `a\|b\|...\|z` |
+
+The `+` and `?` operators have the same precedence and associativity as `*`. Note also that `r* = r+|ε`.
+
+With these, the number definition shrinks to this:
+
+```text
+digit  → [0-9]
+digits → digit+
+number → digits ( . digits )? ( E [+-]? digits )?
+```
+
+Written out as one expression for this tool, it is `[0-9]+(\.[0-9]+)?(E[+-]?[0-9]+)?`.
+
+<TryIt visualizer="automaton-run" regex="[0-9]+(\.[0-9]+)?(E[+-]?[0-9]+)?" text="1.89E-4" machine="minimal">Test the number pattern</TryIt>
+
+The tool also understands these, so you can use them in the practice problems. A later lesson covers which of them Lex itself provides.
+
+- `[^a]` is any one character except `a`.
+- `.` is any one character except a newline. To match an actual dot, write `\.`, as in the expression above.
+- `\n` and `\t` are newline and tab. `\d`, `\w` and `\s` stand for a digit, a word character and whitespace.
+- A backslash removes the special meaning of an operator, so `\*` matches a star and `\(` matches a parenthesis.
+- `"a*b"` in quotes matches that exact text.
+- `ε` is the empty string.
+
+<Callout kind="warning" title="Repeat counts are not available here">
+Many regex tools accept repeat counts such as `a{2}`. They add no power either, since `a{2}` is just `aa`, but this tool does not support them. Write the repeats out.
+</Callout>
+
+## What regular expressions cannot do
+
+A regular expression can say "any number of `a`s", and it can say "exactly three `a`s". What it cannot say is "as many `b`s as there were `a`s", when that number has no upper limit. So it cannot describe $\{a^n b^n \mid n \ge 0\}$, and it cannot describe balanced parentheses, such as `()`, `(())` and `()(())`.
+
+Here is why. As the next lesson shows, every regular expression can be turned into a deterministic finite automaton, a machine that has a fixed number of states and is always in exactly one of them. Suppose some such machine, with $k$ states, accepts exactly the balanced strings of parentheses.
+
+1. Feed it $k + 1$ different inputs: zero, one, two, and so on up to $k$ opening parentheses. There are only $k$ states, so two of these inputs must end in the same state. Call them $(^i$ and $(^j$, with $i \ne j$.
+2. From that state, the machine behaves the same way whatever comes next. So after reading $i$ closing parentheses, both inputs must end in the same state.
+3. But $(^i)^i$ is balanced and must be accepted, while $(^j)^i$ is not balanced and must be rejected. One state cannot do both.
+
+So no such machine exists. The machine has only finitely many states to remember things with, and counting without limit takes unlimited memory.
+
+This is why matching parentheses is the parser's job. A grammar can describe them, using a recursive rule such as `S → ( S ) S | ε`. That rule is not a valid regular definition, because `S` refers to itself.
+
+Bounded nesting is a different matter. If the depth is limited, there is only a fixed amount to remember, and the language is regular. For example, `(\((\(\))*\))*` matches balanced parentheses nested at most two deep.
+
+<TryIt visualizer="automaton-run" regex="(\((\(\))*\))*" text="(()())" machine="minimal">Try depth 2</TryIt>
+
+<TryIt visualizer="automaton-run" regex="(\((\(\))*\))*" text="((()))" machine="minimal">Try depth 3, which it rejects</TryIt>
+
+<Callout kind="note" title="Regexes in programming languages">
+This lesson is about regular expressions as defined in theory and used by lexer generators. Regex libraries in some programming languages add features such as backreferences, and those features can describe languages that are not regular. So when someone says "regex" outside a compiler course, the limits above may not apply.
+</Callout>
+
+## Worked example
+
+Write a regular expression for this language, over the alphabet $\{a, b\}$: strings in which every `a` is immediately followed by a `b`.
+
+**Step 1: list examples.** In the language: ε, `b`, `ab`, `bab`, `abab`, `abb`. Not in the language: `a`, `ba`, `aab`, `aba`.
+
+**Step 2: try the obvious answers, and look for what breaks.**
+
+- `(ab)*` is too narrow. It misses `b`, which has no `a` at all, so every `a` in it is trivially followed by a `b`.
+- `a*b*` is wrong in both directions. It accepts `aab`, where the first `a` is followed by another `a`. It also misses `abab`.
+
+**Step 3: find the building blocks.** Read any valid string from left to right. Each `b` can stand alone, and each `a` must come with the `b` right after it. So a valid string is a sequence of two kinds of chunk: `b` and `ab`.
+
+**Step 4: write it.** Any sequence of those chunks is `(b|ab)*`.
+
+**Step 5: test it.** Run the examples from step 1 through the visualizer.
+
+<TryIt visualizer="automaton-run" regex="(b|ab)*" text="abab" machine="minimal">Test abab</TryIt>
+
+<TryIt visualizer="automaton-run" regex="(b|ab)*" text="aab" machine="minimal">Test aab</TryIt>
+
+The engine draws the smallest machine for this language. It has one state for "everything is fine so far", and one for "I have just read an `a`, so a `b` must come next".
+
+<AutomatonFigure regex="(b|ab)*" show="minimal" caption="The minimal machine for (b|ab)*. A second a has no move from state B, so the string is rejected." />
+
+Other answers can be correct too. `b*(abb*)*` denotes the same language, and in the practice problems below the engine checks your answer for equivalence, so it accepts any correct form.
+
+## Common mistakes
+
+- **Reading `a|b*` as `(a|b)*`.** The star binds to `b` only. `a|b*` does not contain `ab`.
+- **Mixing up $\epsilon$, $\{\epsilon\}$ and $\emptyset$.** $L\emptyset = \emptyset$, but $L\{\epsilon\} = L$. Also, $\emptyset^* = \{\epsilon\}$, because $L^0 = \{\epsilon\}$ for every $L$.
+- **Forgetting that a closure can be empty.** $L^*$ always contains $\epsilon$. $L^+$ contains $\epsilon$ only if $L$ does. So `a*` is a poor pattern for a token: it can match the empty string, and then the lexer makes no progress. The rule format in this module's token-stream visualizer refuses such a pattern.
+- **Assuming that a star distributes.** `(a|b)*` is not `a*|b*`, and `(ab)*` is not `a*b*`.
+- **Thinking the shorthands add power.** `+`, `?` and character classes can all be rewritten with `|`, concatenation and `*`.
+- **Writing `.` for a dot in this tool.** In the regular definitions above, `.` is a literal dot, as in the book. In this tool and in Lex, it means any character but a newline, so `\.` is needed for a literal dot.
+- **Thinking regular expressions cannot count at all.** They can handle any fixed count. They cannot match one unlimited count against another.

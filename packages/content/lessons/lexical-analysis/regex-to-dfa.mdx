@@ -1,0 +1,299 @@
+---
+id: regex-to-dfa
+module: lexical-analysis
+title: From regular expression to minimal DFA
+order: 6
+estimatedMinutes: 40
+prerequisites:
+  - finite-automata
+outcomes:
+  - Build an NFA from a regular expression with Thompson's construction, and state what it guarantees
+  - Convert an NFA to a DFA with the subset construction, and explain why the DFA can grow exponentially
+  - Minimize a DFA by partition refinement
+  - Build a DFA directly from a regular expression using nullable, firstpos, lastpos and followpos
+visualizers:
+  - id: regex-to-nfa
+    label: Regex to NFA
+    props:
+      regex: "(a|b)*abb"
+  - id: subset-construction
+    label: Subset construction
+    props:
+      regex: "(a|b)*abb"
+  - id: dfa-minimization
+    label: Minimization
+    props:
+      regex: "(a|b)*abb"
+  - id: followpos
+    label: Followpos
+    props:
+      regex: "(a|b)*abb"
+---
+
+## Why this matters
+
+You describe a token with a regular expression, because that is easy for a person to write. A lexer runs a deterministic finite automaton (DFA), because that is easy for a machine to run: one current state, one table lookup per character, and no guessing. Something has to turn the first into the second. Tools like Lex and Flex do it automatically, but the method is a fixed recipe you can carry out by hand, and exams ask you to.
+
+The standard route has three steps, and there is a shortcut that skips the NFA:
+
+| Step | From and to | Method |
+| --- | --- | --- |
+| 1 | Regular expression to NFA | Thompson's construction |
+| 2 | NFA to DFA | Subset construction |
+| 3 | DFA to minimal DFA | Partition refinement |
+| Shortcut | Regular expression to DFA | Direct method, using followpos |
+
+This lesson explains each method, then runs all of them on one example from the Dragon Book: `(a|b)*abb`, the language of all strings of `a`s and `b`s that end in `abb`. The four tabs in the visualizer run the same methods one step at a time.
+
+## Step 1: Thompson's construction
+
+Thompson's construction builds an NFA piece by piece, following the structure of the expression. The Dragon Book calls it the McNaughton-Yamada-Thompson algorithm. There is one small rule for each form an expression can take:
+
+| Expression | What the rule builds |
+| --- | --- |
+| ε | A new start state and a new accepting state, joined by an ε-edge. |
+| `a`, a single symbol | A new start state and a new accepting state, joined by an edge labeled `a`. |
+| `s\|t`, union | A new start state with ε-edges into both machines, and a new accepting state with ε-edges out of both. |
+| `st`, concatenation | The accepting state of `s` and the start state of `t` are merged into one state. No new states are created. |
+| `s*`, star | A new start state and a new accepting state, with four ε-edges: one into the machine, one skipping past it for zero repeats, one from its end back to its start for another repeat, and one out of it. |
+
+Each subexpression is built before the operator that uses it. Press play on the first tab and watch `a` and `b` appear first, then the union, then the star.
+
+### What it guarantees
+
+The NFA it produces always has three properties:
+
+1. **Limited size.** It has at most twice as many states as the expression has operators and operands, because each rule adds at most two states. `(a|b)*abb` has 5 operands and 5 operators (`|`, `*` and three concatenations), so it can have at most 20 states. It actually has 11.
+2. **One way in and one way out.** There is exactly one start state, with no edges coming in, and exactly one accepting state, with no edges going out. This is what lets a rule wire two machines together at those states without disturbing anything inside them.
+3. **Few edges per state.** Every state except the accepting one has either one outgoing edge on a symbol, or at most two outgoing ε-edges. So the total number of edges stays proportional to the number of states, which keeps the later steps cheap.
+
+<Callout kind="textbook">
+The book states property 3 with exactly two ε-edges, but states 3 and 5 in the NFA below have only one. This lesson says "at most two" to match what the construction builds.
+
+The book gives rules only for ε, symbols, union, concatenation and star, and treats `r+` and `r?` as shorthand. This tool has a direct rule for each, adding two states. So `a+` has 4 states here, while `aa*`, the same language written out, has 5. `a?` has 4 states here, while `a|ε` has 6. If a question asks you to count states in an expression that uses `+` or `?`, check which form it expects.
+</Callout>
+
+## Step 2: The subset construction
+
+An NFA can be in several states at once. The subset construction removes that by letting one DFA state stand for the whole set of NFA states the NFA could be in at that moment. It needs two operations on a set of NFA states `T`:
+
+- **ε-closure(T)** is `T` plus every NFA state reachable from `T` using only ε-edges.
+- **move(T, a)** is the set of NFA states reachable from a state in `T` by one edge labeled `a`.
+
+The recipe is:
+
+1. The DFA's start state is the ε-closure of the NFA's start state.
+2. For each DFA state `T` you have not processed yet, and each input symbol `a`, compute `U` = ε-closure(move(T, a)). If `U` is a set you have not seen, it becomes a new DFA state. Either way, `T` goes to `U` on `a`.
+3. A DFA state is accepting if its set contains the NFA's accepting state.
+
+If move(T, a) is empty, the string cannot continue from there. This tool leaves that cell of the table empty, which means reading that symbol in that state rejects.
+
+### Why the DFA can grow exponentially
+
+An NFA with $k$ states has $2^k$ subsets of states, so the DFA can need up to $2^k$ states. That is a ceiling, and some languages come close to it. The classic family is "the $n$th symbol from the end is `a`": `(a|b)*a(a|b)` for $n = 2$, `(a|b)*a(a|b)(a|b)` for $n = 3$, and so on.
+
+An NFA handles this language by guessing which `a` is the right one. A DFA cannot guess, so it must remember, for each of the last $n$ symbols, whether it was an `a`. That makes $2^n$ different things to remember, and each needs its own state.
+
+| $n$ | Thompson NFA states | Subset construction states | Minimal DFA states |
+| --- | --- | --- | --- |
+| 2 | 14 | 5 | 4 |
+| 3 | 19 | 9 | 8 |
+| 4 | 24 | 17 | 16 |
+| 5 | 29 | 33 | 32 |
+
+Each extra symbol adds 5 NFA states but doubles the DFA. The subset column is one higher than the minimal one because, just as in the worked example below, the start state and one other state are equivalent until minimization merges them.
+
+<TryIt visualizer="subset-construction" regex="(a|b)*a(a|b)(a|b)">Watch n = 3 build nine states</TryIt>
+
+Do not read this as a daily problem. Patterns for real tokens rarely behave this way, and a typical lexer's DFA stays around the size of its NFA, or smaller. The exponential case is a worst case that you should know exists.
+
+## Step 3: Minimizing by partition refinement
+
+The DFA from step 2 may have redundant states. Two states are **equivalent** if no input string can tell them apart: from either one, every string leads to acceptance from both or from neither. Equivalent states can be merged.
+
+Partition refinement finds them by starting with the coarsest possible grouping and splitting only when forced to:
+
+1. Start with two groups: the accepting states and the non-accepting states. The empty string already tells these apart.
+2. For each group, check its states on each input symbol. Two states stay together only if, on every symbol, they move into the same *group*. They need not move to the same state.
+3. Split the group wherever states disagree, and repeat until nothing splits.
+4. Each final group becomes one state. The group holding the old start state is the new start state, and groups of accepting states are accepting.
+
+States that are still together at the end cannot be told apart by any string, so the result has as few states as possible. The minimal DFA for a language is unique apart from the names of its states, so every correct route ends at the same machine.
+
+If a state has no move on some symbol, treat that as a move to a **dead state**: a non-accepting state that loops to itself forever.
+
+<Callout kind="textbook">
+**Count the dead state or not?** A DFA strictly needs a move on every symbol from every state, so a complete minimal DFA for `a*b` over `a` and `b` has three states: two live ones and a dead one. Lexers usually leave the dead state out, because all it does is say "stop". This tool also leaves it out, so its figures and tables show two states for `a*b`.
+
+Exam questions that ask for the number of states in a minimal DFA usually mean the complete DFA, so check whether a dead state is needed and count it. `(a|b)*abb` and the "$n$th symbol from the end" family need none, because every state has a move on both `a` and `b`.
+</Callout>
+
+<Callout kind="textbook">
+**The visualizer uses a faster variant.** The book's algorithm checks every group in rounds. The Minimization tab uses Hopcroft's algorithm, which keeps a list of groups and uses one at a time to split the others. On `(a|b)*abb` the two make the same splits in the same order. On other inputs the steps can differ, but the final groups are always the same.
+</Callout>
+
+## The shortcut: the direct method
+
+Look back at the subset construction. The ε-closures exist only to find which NFA states have an edge on a real symbol, because only those decide where the automaton goes next. The Dragon Book calls these **important states**. Each one comes from one occurrence of a symbol in the expression, so we can skip the NFA and track those occurrences directly.
+
+To set up:
+
+1. Add an end marker to get `(r)#`. Reaching `#` means the whole expression has matched, so a DFA state will accept exactly when it contains `#`.
+2. Draw the syntax tree, with `or`, `cat` and `star` nodes for union, concatenation and star.
+3. Number each symbol leaf, including `#`, from left to right. These numbers are called **positions**.
+
+Then compute four functions:
+
+- **nullable(n)**: can the subtree at node `n` match the empty string?
+- **firstpos(n)**: which positions can match the first symbol of a string from this subtree?
+- **lastpos(n)**: which positions can match the last symbol of a string from this subtree?
+- **followpos(p)**: for a position `p`, which positions can come right after `p` in some string of the language?
+
+The first three are computed from the leaves upward. In this table, `c1` and `c2` are the children of node `n`:
+
+| Node `n` | nullable(n) | firstpos(n) | lastpos(n) |
+| --- | --- | --- | --- |
+| ε leaf | true | empty | empty |
+| Leaf at position `i` | false | `{i}` | `{i}` |
+| `or` | nullable(c1) or nullable(c2) | firstpos(c1) ∪ firstpos(c2) | lastpos(c1) ∪ lastpos(c2) |
+| `cat` | nullable(c1) and nullable(c2) | If nullable(c1): firstpos(c1) ∪ firstpos(c2). Otherwise firstpos(c1). | If nullable(c2): lastpos(c1) ∪ lastpos(c2). Otherwise lastpos(c2). |
+| `star` | true | firstpos(c1) | lastpos(c1) |
+
+Only two kinds of node add to followpos:
+
+1. **A `cat` node:** whatever ends the left child can be followed by whatever starts the right child. Each position in lastpos(c1) gets all of firstpos(c2) added to its followpos.
+2. **A `star` node:** the repeat can run again, so whatever ends it can be followed by whatever starts it. Each position in lastpos(n) gets all of firstpos(n) added to its followpos.
+
+The DFA is built with the same loop as the subset construction, using followpos in place of ε-closure and move:
+
+1. The start state is firstpos of the root.
+2. For a state `S` and a symbol `a`, the next state is the union of followpos(p) over every position `p` in `S` that holds `a`.
+3. A state accepts if it contains the position of `#`.
+
+The Followpos tab also accepts `+` and `?`, which the book's table does not list. A `+` node is nullable only if its child is, and adds to followpos like `star`. A `?` node is always nullable and adds nothing to followpos.
+
+The direct method often gives fewer states than the subset construction, but it does not promise the minimum. On `ab|cb`, the two `b`s are different positions, so it keeps the states `{2}` and `{4}` apart even though they behave identically. It gives four states, and the minimal DFA has three.
+
+<TryIt visualizer="followpos" regex="ab|cb">See the direct method on ab|cb</TryIt>
+
+## Worked example
+
+Take `(a|b)*abb` through every step. Each table here matches what the visualizer computes.
+
+### 1. Thompson's NFA: 11 states
+
+`(a|b)` needs 6 states, the star adds 2 for 8, and each of `a`, `b`, `b` adds 1, because its start state merges with the state before it. That makes 11, numbered 0 to 10.
+
+| Piece | Edges it adds |
+| --- | --- |
+| `a` | 2 to 3 on `a` |
+| `b` | 4 to 5 on `b` |
+| `a\|b` | 1 to 2, 1 to 4, 3 to 6, 5 to 6, all ε |
+| `(a\|b)*` | 0 to 1, 0 to 7, 6 to 1, 6 to 7, all ε |
+| `abb` | 7 to 8 on `a`, 8 to 9 on `b`, 9 to 10 on `b` |
+
+<AutomatonFigure regex="(a|b)*abb" show="nfa" caption="Thompson's NFA for (a|b)*abb. State 0 is the start and state 10 accepts." />
+
+### 2. Subset construction: five states
+
+The start state is A = ε-closure(0) = `{0, 1, 2, 4, 7}`. Now fill in its two moves:
+
+- On `a`: move(A, a) = `{3, 8}`, because 2 goes to 3 and 7 goes to 8. Its ε-closure is `{1, 2, 3, 4, 6, 7, 8}`. This is new, so it becomes B.
+- On `b`: move(A, b) = `{5}`, because 4 goes to 5. Its ε-closure is `{1, 2, 4, 5, 6, 7}`. This is new, so it becomes C.
+
+Carrying on until no new sets appear gives this table:
+
+| DFA state | NFA states | On `a` | On `b` |
+| --- | --- | --- | --- |
+| A (start) | `{0, 1, 2, 4, 7}` | B | C |
+| B | `{1, 2, 3, 4, 6, 7, 8}` | B | D |
+| C | `{1, 2, 4, 5, 6, 7}` | B | C |
+| D | `{1, 2, 4, 5, 6, 7, 9}` | B | E |
+| E (accepting) | `{1, 2, 4, 5, 6, 7, 10}` | B | C |
+
+Only E contains state 10, so only E accepts.
+
+<AutomatonFigure regex="(a|b)*abb" show="dfa" caption="The five-state DFA from the subset construction." />
+
+### 3. Minimizing: A and C merge, leaving four
+
+| Round | Groups | Why |
+| --- | --- | --- |
+| Start | `{A, B, C, D}`, `{E}` | Accepting states against the rest. |
+| 1 | `{A, B, C}`, `{D}`, `{E}` | On `b`, D moves into the group `{E}`, while A, B and C stay in the first group. |
+| 2 | `{A, C}`, `{B}`, `{D}`, `{E}` | On `b`, B moves into `{D}`, while A and C stay in their group. |
+| 3 | No change | On `a`, A and C both go to B. On `b`, both go to C. Nothing can separate them. |
+
+A, C and E have identical rows in the table above, yet only A and C merge. E accepts and they do not, so the empty string tells them apart. The result is:
+
+| State | On `a` | On `b` |
+| --- | --- | --- |
+| `{A, C}` (start) | B | `{A, C}` |
+| B | B | D |
+| D | B | E |
+| E (accepting) | B | `{A, C}` |
+
+<AutomatonFigure regex="(a|b)*abb" show="minimal" caption="The minimal DFA. The visualizer names the merged state A,C." />
+
+### 4. The direct method: four states straight away
+
+Augmenting gives `(a|b)*abb#`, with these positions:
+
+| Position | 1 | 2 | 3 | 4 | 5 | 6 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Symbol | `a` | `b` | `a` | `b` | `b` | `#` |
+
+Working up the tree:
+
+| Subtree | nullable | firstpos | lastpos |
+| --- | --- | --- | --- |
+| `a\|b` | false | `{1, 2}` | `{1, 2}` |
+| `(a\|b)*` | true | `{1, 2}` | `{1, 2}` |
+| `(a\|b)*a` | false | `{1, 2, 3}` | `{3}` |
+| `(a\|b)*ab` | false | `{1, 2, 3}` | `{4}` |
+| `(a\|b)*abb` | false | `{1, 2, 3}` | `{5}` |
+| `(a\|b)*abb#`, the root | false | `{1, 2, 3}` | `{6}` |
+
+`(a|b)*` is nullable, which is why firstpos of `(a|b)*a` includes position 3 as well as positions 1 and 2.
+
+Now fill in followpos. The `star` node adds `{1, 2}` to positions 1 and 2. The four `cat` nodes above it add `{3}` to positions 1 and 2, `{4}` to position 3, `{5}` to position 4, and `{6}` to position 5:
+
+| Position `p` | Symbol | followpos(p) |
+| --- | --- | --- |
+| 1 | `a` | `{1, 2, 3}` |
+| 2 | `b` | `{1, 2, 3}` |
+| 3 | `a` | `{4}` |
+| 4 | `b` | `{5}` |
+| 5 | `b` | `{6}` |
+| 6 | `#` | empty |
+
+The DFA starts at firstpos of the root, `{1, 2, 3}`. In each row, the `a` positions are 1 and 3, and the `b` positions are 2 and any of 4 or 5 that the state contains:
+
+| DFA state | Positions | On `a` | On `b` |
+| --- | --- | --- | --- |
+| A (start) | `{1, 2, 3}` | followpos(1) ∪ followpos(3) = `{1, 2, 3, 4}`, which is B | followpos(2) = `{1, 2, 3}`, which is A |
+| B | `{1, 2, 3, 4}` | B | followpos(2) ∪ followpos(4) = `{1, 2, 3, 5}`, which is C |
+| C | `{1, 2, 3, 5}` | B | followpos(2) ∪ followpos(5) = `{1, 2, 3, 6}`, which is D |
+| D (accepting) | `{1, 2, 3, 6}` | B | followpos(2) = `{1, 2, 3}`, which is A |
+
+D contains position 6, the `#`, so D accepts. This is the same machine as the minimal DFA, with different names:
+
+| Direct method | Minimal DFA from step 3 |
+| --- | --- |
+| A | `{A, C}` |
+| B | B |
+| C | D |
+| D | E |
+
+Here is why A and C never appear as separate states. Positions 1 to 5 correspond to NFA states 2, 4, 7, 8 and 9, the important states. Keep only those in the subset table, and A and C both reduce to `{2, 4, 7}`. E has the same important states but also holds the accepting state 10, which `#` stands for here.
+
+## Common mistakes
+
+- **Using move without the ε-closure.** move(A, a) is `{3, 8}`, but the DFA state is its closure, `{1, 2, 3, 4, 6, 7, 8}`. Skipping the closure loses states the NFA can reach for free, and the table comes out wrong.
+- **Starting from `{0}`.** The NFA can reach 1, 2, 4 and 7 before reading anything, so the DFA's start state is ε-closure(0).
+- **Comparing target states instead of target groups.** In the first round of minimizing, A goes to C on `b` and B goes to D. Those are different states but the same group, so `b` does not separate A and B in that round.
+- **Merging states because their rows match.** A, C and E have identical rows, but E accepts. Accepting and non-accepting states can never merge.
+- **Expecting the letters to line up.** State C from the direct method is state D of the subset table. Compare machines by what they do, not by their names.
+- **Assuming the direct method gives the minimal DFA.** It does on `(a|b)*abb`, but not on `ab|cb`. Only minimizing guarantees the minimum.
+- **Treating `#` as an input symbol.** It has a position so that it can mark acceptance, but no input character matches it, so the DFA table has no `#` column.
+- **Mixing up the `cat` rules.** firstpos checks whether the *left* child is nullable, and lastpos checks whether the *right* child is. In `a*b`, firstpos includes both positions, but lastpos holds only the `b`.

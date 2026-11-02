@@ -1,0 +1,237 @@
+---
+id: finite-automata
+module: lexical-analysis
+title: 'Finite automata: NFA, DFA and ε-NFA'
+order: 5
+estimatedMinutes: 40
+prerequisites:
+  - regular-expressions
+outcomes:
+  - Give the formal definitions of a DFA and an NFA, and read their transition graphs and tables
+  - Decide whether an automaton accepts a string, by tracing it
+  - Compute ε-closure, and simulate an NFA by tracking a set of states
+  - Explain why DFAs, NFAs and ε-NFAs all recognize exactly the regular languages
+  - Describe the space-time trade-off between NFAs and DFAs
+visualizers:
+  - id: automata-builder
+    label: Build an automaton
+    props:
+      preset: ends-in-abb
+  - id: automaton-run
+    label: Run a regex's machine
+    props:
+      regex: '(a|b)*abb'
+      text: 'aabb'
+      machine: nfa
+---
+
+## Why this matters
+
+A regular expression says which strings belong to a language. It does not say how to check a given string. A **finite automaton** is a machine that does the checking. It reads a string one symbol at a time and answers yes or no, so it is called a **recognizer**.
+
+Lexers are built around this idea, and every regular expression can be turned into a finite automaton. There are three kinds to know: the DFA, the NFA and the ε-NFA. They all recognize exactly the same languages, but they differ a lot in size and speed. That trade-off explains why lexers are built the way they are.
+
+## How a finite automaton works
+
+An automaton has a set of **states**, one of which is the **start state**, and some of which are **accepting states**. Labeled **edges** connect the states. It begins in the start state and follows an edge for each symbol it reads. After the last symbol, it accepts the string if it has reached an accepting state.
+
+You can draw this as a **transition graph**: circles for states, labeled arrows for edges, an arrow into the start state, and a double circle for each accepting state.
+
+<AutomatonFigure regex="(a|b)*abb" show="minimal" caption="A DFA for strings that end in abb. A,C is q0 in the table below, B is q1, D is q2, and E is q3." />
+
+You can also write it as a **transition table**, with one row for each state and one column for each symbol. This is the same machine:
+
+| State | on `a` | on `b` |
+| --- | --- | --- |
+| `q0` (start) | `q1` | `q0` |
+| `q1` | `q1` | `q2` |
+| `q2` | `q1` | `q3` |
+| `q3` (accepting) | `q1` | `q0` |
+
+The states act as the machine's only memory. Here, `q1` means "the last symbol was `a`", `q2` means "the last two were `ab`", `q3` means "the last three were `abb`", and `q0` means "none of those".
+
+## Deterministic finite automata
+
+A **DFA** consists of five things:
+
+1. A finite set of states, $S$.
+2. A finite input alphabet, $\Sigma$.
+3. A transition function that gives one next state for each state and each symbol: $\text{move}(s, a)$.
+4. A start state, $s_0 \in S$.
+5. A set of accepting states, $F \subseteq S$.
+
+Two rules make it deterministic: there are no moves on $\epsilon$, and for each state and each input symbol, there is exactly one edge. So the machine never has a choice.
+
+Running a DFA takes one loop and one table lookup per symbol:
+
+```text
+s = s0
+c = nextChar()
+while (c != eof) {
+  s = move(s, c)
+  c = nextChar()
+}
+if (s is in F) return "yes" else return "no"
+```
+
+On the input `ababb`, this DFA goes through `q0`, `q1`, `q2`, `q1`, `q2`, `q3`, and accepts. On `abbab`, it goes through `q0`, `q1`, `q2`, `q3`, `q1`, `q2`, and rejects. It passes through the accepting state `q3` on the way, but only the state at the end counts.
+
+The first tab in the visualizer holds this machine. Type a string under **Test a string** and press play.
+
+<Callout kind="textbook" title="Exactly one edge, or at most one?">
+The Dragon Book's definition requires exactly one edge for each state and symbol. Diagrams often leave out a **dead state**, a non-accepting state with no way out, and treat a missing edge as "reject". The diagrams and machines on this site do this too, and the builder labels such a machine "a partial DFA". This matters when counting states. The site draws 3 states for `ab`, but a complete DFA over $\{a, b\}$ needs 4, because it includes the dead state. Exam questions about the number of states usually mean a complete DFA, but check the wording.
+</Callout>
+
+## Nondeterministic finite automata
+
+An **NFA** has the same five parts, with one difference. The transition function gives a *set* of next states, for each state and each symbol in $\Sigma \cup \{\epsilon\}$. So:
+
+- A state may have several edges with the same label.
+- A state may have no edge for a symbol. That is the empty set, $\emptyset$.
+- An edge may be labeled $\epsilon$. We assume $\epsilon$ is never a symbol of $\Sigma$.
+
+This NFA also recognizes strings that end in `abb`:
+
+| State | on `a` | on `b` | on ε |
+| --- | --- | --- | --- |
+| `q0` (start) | `{q0, q1}` | `{q0}` | $\emptyset$ |
+| `q1` | $\emptyset$ | `{q2}` | $\emptyset$ |
+| `q2` | $\emptyset$ | `{q3}` | $\emptyset$ |
+| `q3` (accepting) | $\emptyset$ | $\emptyset$ | $\emptyset$ |
+
+**Acceptance.** An NFA accepts a string if there is **at least one path** from the start state to an accepting state whose labels spell out the string. Any $\epsilon$ labels on the path add nothing to the string. Other paths may fail, and that does not matter.
+
+Take `aabb`. One path, `q0`, `q0`, `q0`, `q0`, `q0`, ends in a non-accepting state. Another path, `q0`, `q0`, `q1`, `q2`, `q3`, ends in an accepting state. One good path is enough, so the NFA accepts. The **language** of an automaton is the set of all strings it accepts.
+
+<Callout kind="note" title="There is no guessing">
+Do not picture an NFA as choosing a path at random, or as lucky. The definition only asks whether a good path exists. A program can find out by tracking every state the NFA could be in, as you will see below.
+</Callout>
+
+You can turn the DFA in the first tab into this NFA:
+
+1. Select each of the edges from `q1` to itself, `q2` to `q1`, `q3` to `q1`, and `q3` to `q0`, and press **Delete selected**. The label under the canvas now says "a partial DFA".
+2. In the form, choose From `q0`, On `a`, To `q0`, and press **Add transition**. The label now says "an NFA", because `q0` has two moves on `a`.
+3. Under **Check against a regular expression**, type `(a|b)*abb`. It tells you the automaton still accepts exactly this language.
+
+## ε-moves and the ε-NFA
+
+An **ε-move** lets the machine change state without reading any input. An NFA that has such moves is often called an **ε-NFA**. They are useful for joining smaller machines together: an expression like `a|b` can become a start state with an ε-move into a machine for `a` and an ε-move into a machine for `b`.
+
+<TryIt visualizer="automata-builder" preset="a-or-b">Load a small ε-NFA for a|b</TryIt>
+
+The next topic builds an NFA for any regular expression in this way, by Thompson's construction. Here is the result for `(a|b)*abb`, computed by the engine. It has 11 states, numbered as in the Dragon Book.
+
+<AutomatonFigure regex="(a|b)*abb" show="nfa" caption="The ε-NFA that Thompson's construction builds for (a|b)*abb." />
+
+<Callout kind="textbook" title="Is an ε-NFA a kind of NFA?">
+In the Dragon Book, an NFA may have ε-moves by definition, so an ε-NFA is simply an NFA. Other textbooks, such as Hopcroft, Motwani and Ullman's book on automata theory, define the NFA without ε-moves and treat the ε-NFA as a separate model. The two kinds recognize the same languages, so only the wording differs. Check which definition your course uses when a question asks about "an NFA".
+</Callout>
+
+## ε-closure
+
+With ε-moves, an NFA can be in several states before it reads anything. **ε-closure** captures this:
+
+- $\epsilon\text{-closure}(s)$ is the set of states reachable from state $s$ using ε-moves alone. It always includes $s$ itself, using zero moves.
+- $\epsilon\text{-closure}(T)$, for a set of states $T$, is the union of $\epsilon\text{-closure}(s)$ for every $s$ in $T$.
+- $\text{move}(T, a)$ is the set of states reachable from a state in $T$ by a single edge labeled $a$.
+
+To compute a closure, start with the state itself and keep following ε-edges until nothing new appears. In the figure above, the ε-edges are `0→1`, `0→7`, `1→2`, `1→4`, `3→6`, `5→6`, `6→1` and `6→7`. To find $\epsilon\text{-closure}(0)$:
+
+1. Start with `{0}`.
+2. From `0`, add `1` and `7`.
+3. From `1`, add `2` and `4`.
+4. `2`, `4` and `7` have no ε-edges out, so stop.
+
+The result is `{0, 1, 2, 4, 7}`.
+
+These give a way to run an NFA: keep the set of all states it could be in, and update that set for each symbol.
+
+```text
+S = ε-closure(s0)
+c = nextChar()
+while (c != eof) {
+  S = ε-closure(move(S, c))
+  c = nextChar()
+}
+if (S contains an accepting state) return "yes" else return "no"
+```
+
+## They all recognize the same languages
+
+An NFA looks more powerful than a DFA, but it is not.
+
+- Every DFA is already an NFA.
+- Every NFA, with or without ε-moves, can be converted to a DFA that accepts the same language. The next topic shows how: each DFA state stands for a set of NFA states.
+- Every regular expression can be converted to an NFA, and every finite automaton can be converted to a regular expression.
+
+So regular expressions, NFAs, ε-NFAs and DFAs all describe exactly the **regular languages**. The one small exception to this neat picture is the empty language, which an automaton can define but the book's regular expressions cannot, as the last lesson's note explains.
+
+Nondeterminism does not add power. It does change the cost.
+
+## The space-time trade-off
+
+The difference shows up in how large the machine is and how long it takes to run. Let $|r|$ be the size of the regular expression, and $|x|$ the length of the input string.
+
+| Automaton | Cost to build | Cost per string |
+| --- | --- | --- |
+| NFA | $O(\lvert r \rvert)$ | $O(\lvert r \rvert \cdot \lvert x \rvert)$ |
+| DFA, typical case | $O(\lvert r \rvert^3)$ | $O(\lvert x \rvert)$ |
+| DFA, worst case | $O(\lvert r \rvert^2 2^{\lvert r \rvert})$ | $O(\lvert x \rvert)$ |
+
+An NFA is small and quick to build, but each input symbol may touch many states. A DFA does one table lookup per symbol, but it can be far larger.
+
+How much larger? Consider strings over $\{a, b\}$ whose $n$th symbol from the right is `a`. An NFA needs only $n + 1$ states: it waits in the start state, and on some `a` it moves along a chain of $n$ more states. Any DFA needs at least $2^n$ states, because it must remember the last $n$ symbols, since any of them might turn out to be the $n$th from the end. The engine's minimal DFAs confirm this:
+
+| $n$ | Regular expression | NFA states | Minimal DFA states |
+| --- | --- | --- | --- |
+| 1 | `(a\|b)*a` | 2 | 2 |
+| 2 | `(a\|b)*a(a\|b)` | 3 | 4 |
+| 3 | `(a\|b)*a(a\|b)(a\|b)` | 4 | 8 |
+| 4 | `(a\|b)*a(a\|b)(a\|b)(a\|b)` | 5 | 16 |
+
+<AutomatonFigure regex="(a|b)*a(a|b)(a|b)" show="minimal" caption="The minimal DFA for n = 3. It has 8 states, one for each possible sequence of the last three symbols." />
+
+So which should you use? It depends on how often the machine runs.
+
+- **A lexer** is generated once and then runs over a lot of input, so it uses a DFA. Spending more time up front pays off.
+- **A tool like grep** often runs a new pattern on one input, so simulating an NFA can make more sense.
+
+A middle path is to simulate the NFA, and save each DFA state the first time it is needed. Then the program never builds the DFA states it does not use.
+
+<Callout kind="textbook" title="Check the cost table">
+The table above follows the Dragon Book's summary of initial and per-string costs. "Typical case" describes what usually happens in practice, and is not a guarantee. Other textbooks may state these bounds differently, so check your course's version before you quote them in an answer.
+</Callout>
+
+## Worked example
+
+Trace the ε-NFA for `(a|b)*abb`, from the figure above, on the string `aabb`. Its symbol edges are `2→3` on `a`, `4→5` on `b`, `7→8` on `a`, `8→9` on `b`, and `9→10` on `b`. State `10` is the accepting state.
+
+| Step | Read | $\text{move}(S, c)$ | $S = \epsilon\text{-closure}(\text{move}(S, c))$ |
+| --- | --- | --- | --- |
+| Start | | | `{0, 1, 2, 4, 7}` |
+| 1 | `a` | `{3, 8}` | `{1, 2, 3, 4, 6, 7, 8}` |
+| 2 | `a` | `{3, 8}` | `{1, 2, 3, 4, 6, 7, 8}` |
+| 3 | `b` | `{5, 9}` | `{1, 2, 4, 5, 6, 7, 9}` |
+| 4 | `b` | `{5, 10}` | `{1, 2, 4, 5, 6, 7, 10}` |
+
+The final set contains `10`, so the NFA accepts `aabb`.
+
+Now step through it in the visualizer, and compare the highlighted states with each row.
+
+<TryIt visualizer="automaton-run" regex="(a|b)*abb" text="aabb" machine="nfa">Run the NFA on aabb</TryIt>
+
+Then run the DFA on the same string. Its machine has one state for each set in the table: `A` is the first set, `B` is the set after an `a`, `D` is the set after `ab`, and `E` is the set after `abb`. The DFA goes through `A`, `B`, `B`, `D`, `E`, the same sequence that the table shows. The NFA works these sets out while it runs. The DFA has them already, as states. That is the key idea behind converting an NFA to a DFA, which the next topic covers.
+
+<TryIt visualizer="automaton-run" regex="(a|b)*abb" text="aabb" machine="dfa">Run the DFA on aabb</TryIt>
+
+## Common mistakes
+
+- **Saying an NFA needs all paths to succeed.** It accepts if at least one path reaches an accepting state. Failed paths do not matter.
+- **Thinking an NFA is more powerful than a DFA.** Both recognize exactly the regular languages. What an NFA can gain is compactness.
+- **Leaving a state out of its own ε-closure.** $\epsilon\text{-closure}(s)$ always contains $s$.
+- **Stopping the closure after one ε-move.** Keep following ε-edges until no new state appears.
+- **Forgetting the closure while simulating.** Take the closure of the start state before reading anything, and again after every $\text{move}$.
+- **Crossing a symbol edge when computing a closure.** Only ε-edges count. A closure reads no input.
+- **Accepting because a run passed through an accepting state.** Only the state or states at the end of the input count.
+- **Leaving out the dead state when an exam wants a complete DFA.** Diagrams here omit it. A complete DFA has exactly one move for every state and symbol, so count it if it is needed.
+- **Thinking a DFA is always bigger than an NFA for the same language.** The exponential case is the worst case. For `(a|b)*abb`, the smallest DFA has 4 states, the same as the NFA above.

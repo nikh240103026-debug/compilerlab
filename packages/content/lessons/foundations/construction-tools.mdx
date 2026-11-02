@@ -1,0 +1,205 @@
+---
+id: construction-tools
+module: foundations
+title: Compiler-construction tools
+order: 5
+estimatedMinutes: 25
+prerequisites:
+  - compiler-phases
+outcomes:
+  - Name the six kinds of compiler-construction tools and what each one does
+  - Match each tool to the compiler phase it helps to build
+  - Say what Lex or Flex and Yacc or Bison take in and what they generate
+  - Explain how longest match and rule order decide which token a scanner produces
+visualizers:
+  - id: token-stream
+    label: A small scanner generator
+    props:
+      source: "if (count) count = 0;"
+      rules: |
+        IF     if        %keyword
+        ID     [a-z]+    %identifier
+        NUMBER [0-9]+    %literal
+        ASSIGN =         %operator
+        LPAREN \(        %punctuation
+        RPAREN \)        %punctuation
+        SEMI   ;         %punctuation
+        WS     [ \t\n]+  %skip
+---
+
+## Why this matters
+
+Parts of a compiler are highly mechanical. Given a list of token patterns, there is a known algorithm for building a fast scanner. Given a grammar, there is a known algorithm for building a parsing table. Doing this by hand is slow and easy to get wrong, and you have to redo it whenever the language changes.
+
+**Compiler-construction tools** automate this work. You describe what you want in a small specialized language, and the tool generates the component. The most successful tools hide their algorithms, so you rarely have to look at the automaton or the table they build.
+
+The panel beside this lesson is a tool of this kind. You write token rules, and it builds a scanner from them. Press play to watch that scanner run.
+
+## The six kinds of tools
+
+The Dragon Book lists six kinds of tools, beyond ordinary programming tools such as editors and debuggers.
+
+| Tool | You give it | It gives you | Helps build |
+| --- | --- | --- | --- |
+| Scanner generator | Regular expressions for the tokens | A lexical analyzer | Lexical analysis |
+| Parser generator | A grammar for the language | A syntax analyzer | Syntax analysis |
+| Syntax-directed translation engine | Translation rules tied to the language's structure | Routines that walk a parse tree and generate intermediate code | Intermediate code generation |
+| Code-generator generator | Rules for translating each intermediate-language operation into machine language | A code generator | Code generation |
+| Data-flow analysis engine | A description of the facts to gather | Facts about how values move through the program | Code optimization |
+| Compiler-construction toolkit | Your calls to its routines | An integrated set of routines | Several phases |
+
+<Callout kind="textbook" title="The list and the examples">
+The six categories follow the Dragon Book's list, which starts with parser generators rather than scanner generators. Lex and Yacc are the book's own examples, covered in its later chapters. The other named systems in this lesson, such as LLVM, TableGen and GCC's machine descriptions, were added here as modern examples. Real systems often span more than one category.
+</Callout>
+
+### Scanner generators: Lex and Flex
+
+**Lex** is the classic scanner generator from Unix, and **Flex** is a widely used free version of it. You write patterns and actions in a file ending in `.l`, and the tool writes a C file named `lex.yy.c`, which contains the scanner function `yylex`. Internally, it turns your patterns into a finite automaton, which Module 1 explains.
+
+When more than one pattern could match, two rules decide:
+
+1. **Longest match.** Prefer the pattern that matches the most characters.
+2. **Rule order.** If several patterns match the same longest text, prefer the one listed first.
+
+The visualizer follows the same two rules. With `IF` listed above `ID`, the input `if` is a keyword, while `iffy` is an identifier, because it is the longer match.
+
+<TryIt visualizer="token-stream" source="iffy = if" rules="IF     if        %keyword
+ID     [a-z]+    %identifier
+NUMBER [0-9]+    %literal
+ASSIGN =         %operator
+LPAREN \(        %punctuation
+RPAREN \)        %punctuation
+SEMI   ;         %punctuation
+WS     [ \t\n]+  %skip">Try longest match on iffy</TryIt>
+
+Now swap the first two rules, so that `ID` comes first. The word `if` matches both patterns with the same length, so `ID` wins every time, and the rule for `IF` can never match. The tool warns you about this, and Flex gives a similar warning.
+
+<TryIt visualizer="token-stream" source="if (count) count = 0;" rules="ID     [a-z]+    %identifier
+IF     if        %keyword
+NUMBER [0-9]+    %literal
+ASSIGN =         %operator
+LPAREN \(        %punctuation
+RPAREN \)        %punctuation
+SEMI   ;         %punctuation
+WS     [ \t\n]+  %skip">Put ID above IF</TryIt>
+
+### Parser generators: Yacc and Bison
+
+**Yacc**, short for "yet another compiler-compiler", is the classic parser generator from Unix, and **Bison** is the GNU version, which works in a largely compatible way. You write a grammar in a file ending in `.y`, and you can attach an **action** to each rule: a piece of C code that runs when the rule is recognized.
+
+The tool builds an **LALR parser**, a kind of bottom-up parser explained in Module 2, and it writes it out as C code with a function named `yyparse`. Whenever `yyparse` needs a token, it calls `yylex`. So the two generated pieces fit together just like the lexer and parser you have already met.
+
+### Syntax-directed translation engines
+
+**Syntax-directed translation** means attaching translation rules to the structure of the language. These engines produce routines that walk a parse tree and generate intermediate code. Yacc's actions give you a small taste of the idea, as the worked example shows. Module 3 covers this properly.
+
+### Code-generator generators
+
+A hand-written code generator is full of similar cases. A **code-generator generator** takes a collection of rules, covering each operation of the intermediate language, and it produces the code generator from them. For example, a rule might say that a floating-point addition of two registers becomes `ADDF R1, R1, R2`. To support a new machine, you write a new set of rules. GCC's machine descriptions and LLVM's TableGen are real systems built around this idea.
+
+### Data-flow analysis engines
+
+**Data-flow analysis** gathers information about how values move from one part of a program to another. Take this code:
+
+```text
+x = 5
+y = x + 1
+```
+
+Data-flow analysis can establish that `x` is always 5 at the second line, so an optimizer may replace `x + 1` with `6`. An engine supplies the general machinery for analyses like this one. It only gathers the facts, and the optimizer decides what to do with them. Module 5 covers this.
+
+### Compiler-construction toolkits
+
+A **toolkit** gives you an integrated set of routines for building several phases, instead of generating one component. **LLVM** is the best-known modern example. A language's front end produces LLVM's intermediate representation, and LLVM supplies optimizers and code generators for many machines.
+
+## Worked example
+
+Let us use Flex and Bison to build a calculator that reads `2 + 3 * 4` and prints `14`. Two short files are all you need to write.
+
+**Step 1: describe the tokens,** in a file named `calc.l`.
+
+```text
+%{
+#include <stdlib.h>
+#include "calc.tab.h"
+%}
+%%
+[0-9]+    { yylval = atoi(yytext); return NUMBER; }
+[ \t]+    { /* skip blanks */ }
+.|\n      { return yytext[0]; }
+%%
+int yywrap(void) { return 1; }
+```
+
+Each line between the `%%` markers is a pattern and an action. `yytext` holds the current lexeme, and `yylval` passes its value to the parser. The blank rule returns nothing, so blanks vanish, just like `%skip` in the visualizer. The last rule returns any other character, such as `+`, as a token standing for itself.
+
+You can scan the same input in the visualizer. Its rules give `+` and `*` token names of their own, where the Flex version returns each character as itself.
+
+<TryIt visualizer="token-stream" source="2 + 3 * 4" rules="NUMBER [0-9]+    %literal
+PLUS   \+        %operator
+TIMES  \*        %operator
+WS     [ \t\n]+  %skip">Scan the calculator's input</TryIt>
+
+**Step 2: describe the grammar,** in a file named `calc.y`.
+
+```text
+%{
+#include <stdio.h>
+int yylex(void);
+void yyerror(const char *message);
+%}
+%token NUMBER
+%left '+'
+%left '*'
+%%
+line : expr '\n'      { printf("%d\n", $1); }
+     ;
+expr : expr '+' expr  { $$ = $1 + $3; }
+     | expr '*' expr  { $$ = $1 * $3; }
+     | NUMBER
+     ;
+%%
+void yyerror(const char *message) { fprintf(stderr, "%s\n", message); }
+int main(void) { return yyparse(); }
+```
+
+- `%token NUMBER` declares a token name that the scanner can return.
+- `%left` makes an operator left-associative, and an operator declared on a later line has higher precedence. So `*` binds tighter than `+`.
+- In an action, `$1` and `$3` are the values of the first and third symbols in the rule, and `$$` is the value of the rule's result. This is syntax-directed translation in miniature.
+
+**Step 3: run the tools, then the C compiler.**
+
+```text
+bison -d calc.y
+flex calc.l
+gcc calc.tab.c lex.yy.c -o calc
+```
+
+| Step | Tool | Reads | Writes |
+| --- | --- | --- | --- |
+| 1 | Bison | `calc.y` | `calc.tab.c` and `calc.tab.h` |
+| 2 | Flex | `calc.l` | `lex.yy.c` |
+| 3 | gcc | `calc.tab.c` and `lex.yy.c` | `calc` |
+
+The `-d` flag asks Bison for the header file `calc.tab.h`, which defines `NUMBER` and declares `yylval`. The scanner needs both, which is why `calc.l` includes that file.
+
+**Step 4: run it.**
+
+```text
+echo "2 + 3 * 4" | ./calc
+14
+```
+
+Here is what happened. `yyparse` kept calling `yylex`, which returned `NUMBER` (value 2), `+`, `NUMBER` (value 3), `*`, `NUMBER` (value 4), and then the newline. Because `*` has higher precedence, the parser handled `3 * 4` first, giving 12, and then `2 + 12`, giving 14. The `line` rule's action printed the result.
+
+You never wrote an automaton, a parsing table or a parsing loop. Notice also that this program computes the answer as it parses and generates no code, so it is really a small interpreter. A real compiler would generate intermediate code in those actions instead.
+
+## Common mistakes
+
+- **Thinking Lex and Yacc build a whole compiler.** They generate a scanner and a parser. Type checking, optimization and code generation are still up to you, or to other tools.
+- **Thinking they produce an executable.** They produce C source code, which you must still compile.
+- **Mixing up the two.** Lex or Flex reads regular expressions and makes a scanner. Yacc or Bison reads a grammar and makes a parser.
+- **Listing the identifier rule above the keyword rules.** Keywords then never match, because identifiers win the tie. Keyword rules must come first.
+- **Thinking a parser generator checks meaning.** It checks structure. A type error gets through unless your own actions check for it.
+- **Thinking a data-flow engine optimizes code.** It gathers facts. An optimizer uses those facts to change the code.
+- **Thinking every serious compiler uses these generators.** GCC and Clang both use hand-written parsers, which gives their authors finer control, for instance over error messages. Generators are still common, and they are excellent for smaller languages and for learning.

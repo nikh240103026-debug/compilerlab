@@ -1,0 +1,249 @@
+{
+  "summary": [
+    "Thompson's construction turns a regular expression into an NFA with at most twice as many states as operators and operands, one start state with no incoming edges, and one accepting state with no outgoing edges.",
+    "The subset construction makes each DFA state a set of NFA states, found with ε-closure and move. An NFA with k states can need up to 2^k DFA states, although real token patterns rarely come close.",
+    "Partition refinement starts from accepting versus non-accepting states and splits groups until no input symbol can separate the states in a group. The result is the minimal DFA, which is unique apart from state names.",
+    "The direct method builds a DFA from the augmented expression (r)# using nullable, firstpos, lastpos and followpos, with no NFA. It often gives fewer states than the subset construction, but it does not promise the minimum.",
+    "For (a|b)*abb, Thompson's NFA has 11 states, the subset construction gives five DFA states A to E, minimizing merges A and C to give four, and the direct method gives four directly."
+  ],
+  "practice": [
+    {
+      "id": "subset-table-ab",
+      "type": "short",
+      "prompt": "Here is Thompson's NFA for (a|b)*ab. State 0 is the start and state 9 accepts.\n\nε-edges: 0 to 1, 0 to 7, 1 to 2, 1 to 4, 3 to 6, 5 to 6, 6 to 1, 6 to 7\nSymbol edges: 2 on a to 3, 4 on b to 5, 7 on a to 8, 8 on b to 9\n\nUse the subset construction to build the DFA table. For each DFA state, give its set of NFA states and its moves on a and b, and say which states accept.",
+      "hint": "Begin with the ε-closure of state 0. For each new set, take move on each symbol first, and then the ε-closure of that result.",
+      "solution": "A = {0, 1, 2, 4, 7}: on a to B, on b to C\nB = {1, 2, 3, 4, 6, 7, 8}: on a to B, on b to D\nC = {1, 2, 4, 5, 6, 7}: on a to B, on b to C\nD = {1, 2, 4, 5, 6, 7, 9}: on a to B, on b to C\n\nD is the only accepting state, because it is the only set containing 9.",
+      "explanation": "For example, move(A, a) = {3, 8}, and its ε-closure is B. Using {3, 8} itself as the state is the most common slip, and it loses every state reachable by ε-edges. A, C and D have the same row, but the subset construction does not merge anything: that is the job of minimizing. You can check your table on the Subset construction tab by entering (a|b)*ab.",
+      "difficulty": "medium",
+      "tags": ["subset-construction", "table-construction"],
+      "exams": ["university"]
+    },
+    {
+      "id": "followpos-table-ab",
+      "type": "short",
+      "prompt": "Use the direct method on (a|b)*ab. Augment it with #, number the positions, give the followpos table, and build the DFA table.",
+      "hint": "There are five positions, counting #. Only the star node and the cat nodes add to followpos. The start state is firstpos of the root.",
+      "solution": "Positions: a = 1, b = 2, a = 3, b = 4, # = 5.\n\nfollowpos(1) = {1, 2, 3}\nfollowpos(2) = {1, 2, 3}\nfollowpos(3) = {4}\nfollowpos(4) = {5}\nfollowpos(5) is empty\n\nA = {1, 2, 3}: on a to B, on b to A\nB = {1, 2, 3, 4}: on a to B, on b to C\nC = {1, 2, 3, 5}: on a to B, on b to A\n\nC accepts, because it contains position 5, the #.",
+      "explanation": "The star gives positions 1 and 2 the set {1, 2}, and the cat nodes then add {3} to positions 1 and 2, {4} to 3, and {5} to 4. On a, state A uses positions 1 and 3, so its next state is followpos(1) ∪ followpos(3). A common slip is to forget position 3 here, or to add a # column to the table. # marks acceptance and no input character matches it.",
+      "difficulty": "medium",
+      "tags": ["followpos", "direct-method", "table-construction"],
+      "exams": ["university"]
+    },
+    {
+      "id": "partition-refinement-table",
+      "type": "short",
+      "prompt": "Minimize this DFA over a and b by partition refinement. A is the start state, and D and E accept. Show the groups after each round.\n\nA: on a to B, on b to C\nB: on a to D, on b to E\nC: on a to B, on b to C\nD: on a to D, on b to E\nE: on a to B, on b to C",
+      "hint": "Write down the two starting groups. For each state, note which group each move lands in, not just which state.",
+      "solution": "Start: {A, B, C}, {D, E}\nRound 1: {A, C}, {B}, {D}, {E}\nRound 2: no change\n\nThe minimal DFA has four states, with A and C merged.",
+      "explanation": "In round 1, B goes to D on a, which is in the accepting group, while A and C go to B, so B splits off. D stays in the accepting group on a, while E leaves it, so D and E split. D and E both accept and C and E have the same row, but neither of those facts is enough to merge: states merge only if they stay together through every round.",
+      "difficulty": "medium",
+      "tags": ["minimization", "table-construction"],
+      "exams": ["university"]
+    },
+    {
+      "id": "regex-second-from-end",
+      "type": "regex",
+      "prompt": "Write a regular expression for all strings over a and b whose second-to-last symbol is a.",
+      "reference": "(a|b)*a(a|b)",
+      "accepts": ["aa", "ab", "bab", "baa", "abab"],
+      "rejects": ["", "a", "b", "ba", "bb", "abb"],
+      "hint": "Describe the end of the string first. How many symbols come after the a, and which symbols can they be?",
+      "solution": "(a|b)*a(a|b)",
+      "explanation": "(a|b)* covers any prefix, a is the required symbol, and (a|b) is exactly one more symbol of either kind. Writing (a|b)*a(a|b)* is wrong: it accepts any string with an a anywhere. This is the n = 2 member of the family with exponential DFAs, and its minimal DFA has four states.",
+      "difficulty": "easy",
+      "tags": ["regex", "exponential-growth"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "regex-from-dfa-table",
+      "type": "regex",
+      "prompt": "A DFA over a and b has three states. A is the start state and C is the only accepting state.\n\nA: on a to B, on b to A\nB: on a to B, on b to C\nC: on a to B, on b to A\n\nWrite a regular expression for the language it accepts.",
+      "reference": "(a|b)*ab",
+      "accepts": ["ab", "aab", "bab", "abab"],
+      "rejects": ["", "a", "b", "ba", "abb"],
+      "hint": "Run a few short strings through the table. What must the final symbols be for a run to end in C?",
+      "solution": "(a|b)*ab",
+      "explanation": "Every a leads to B, and from B only a b reaches C. Any other symbol from C leaves it. So a string is accepted exactly when it ends in ab. Answers like a*b are too narrow, because they reject strings such as bab, which the table accepts.",
+      "difficulty": "medium",
+      "tags": ["regex", "dfa"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "count-fifth-from-end",
+      "type": "mcq",
+      "prompt": "How many states does the minimal DFA have for the language of strings over a and b in which the fifth symbol from the end is a?",
+      "options": ["6", "16", "32", "33"],
+      "answer": 2,
+      "hint": "What does the DFA have to remember about the recent input, and how many different things is that?",
+      "solution": "32",
+      "explanation": "The DFA must remember which of the last 5 symbols were a, which gives 2^5 = 32 states, and no dead state is needed. 6 is the size of a simple NFA for the language, which can guess. 16 is the answer for the fourth symbol from the end. 33 is what the subset construction on Thompson's NFA gives before minimizing merges two states.",
+      "difficulty": "medium",
+      "tags": ["exponential-growth", "state-count"],
+      "exams": ["GATE"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "thompson-state-count",
+      "type": "mcq",
+      "prompt": "How many states does Thompson's construction give for (a|b)*b, using the book's rule that concatenation merges two states?",
+      "options": ["8", "9", "11", "12"],
+      "answer": 1,
+      "hint": "Build it from the inside out, keeping a running total for each operator.",
+      "solution": "9",
+      "explanation": "a|b has 6 states, the star adds 2 to make 8, and concatenating b adds 1, because its start state merges with the star's accepting state. 8 forgets the final b. 11 is the count for (a|b)*abb. 12 is the upper bound, twice the 3 operands plus 3 operators, and the real count can be lower.",
+      "difficulty": "medium",
+      "tags": ["thompson", "state-count"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "thompson-guarantee",
+      "type": "mcq",
+      "prompt": "Which property does Thompson's construction guarantee?",
+      "options": [
+        "The NFA has the fewest states possible for its language",
+        "The NFA has no ε-edges",
+        "Every state has exactly one outgoing edge",
+        "The start state has no incoming edges, and the one accepting state has no outgoing edges"
+      ],
+      "answer": 3,
+      "hint": "Think about what makes it safe to wire two finished machines together.",
+      "solution": "The start state has no incoming edges, and the one accepting state has no outgoing edges.",
+      "explanation": "This is why the rules can connect machines at those states without disturbing them. The NFA is usually far from the smallest possible, and it relies heavily on ε-edges. A state can have two outgoing ε-edges, so exactly one per state is also wrong.",
+      "difficulty": "easy",
+      "tags": ["thompson"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "subset-upper-bound",
+      "type": "mcq",
+      "prompt": "An NFA has k states. What is the largest number of states the subset construction could produce?",
+      "options": ["k", "2k", "k squared", "2 to the power k"],
+      "answer": 3,
+      "hint": "What is each DFA state, in terms of the NFA's states?",
+      "solution": "2 to the power k",
+      "explanation": "Each DFA state is a subset of the NFA's states, and a set of k things has 2^k subsets. A DFA with about k states is common in practice, but k is not a limit. 2k may come to mind from Thompson's size bound, which is about going from an expression to an NFA, not from an NFA to a DFA.",
+      "difficulty": "easy",
+      "tags": ["subset-construction", "exponential-growth"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "minimal-third-from-end",
+      "type": "mcq",
+      "prompt": "How many states does the minimal DFA for (a|b)*a(a|b)(a|b) have?",
+      "options": ["4", "6", "8", "9"],
+      "answer": 2,
+      "hint": "Ask what the DFA has to remember about the last few symbols it read.",
+      "solution": "8",
+      "explanation": "The language is strings whose third symbol from the end is a, so the DFA must remember which of the last 3 symbols were a, giving 2^3 = 8 states, with no dead state needed. 4 is the size of a simple NFA, which can guess, and also the answer for the second symbol from the end. 6 is 2 times 3, but the growth is a power of 2, not a multiple. 9 is the subset construction's count before minimizing.",
+      "difficulty": "medium",
+      "tags": ["exponential-growth", "state-count"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "why-e-does-not-merge",
+      "type": "mcq",
+      "prompt": "In the subset DFA for (a|b)*abb, states A, C and E all go to B on a and to C on b. Why does minimizing merge only A and C?",
+      "options": [
+        "E was the last state the subset construction found",
+        "E accepts, and A and C do not",
+        "E holds a different set of NFA states",
+        "Merging three states at once is not allowed"
+      ],
+      "answer": 1,
+      "hint": "What does the very first split in the algorithm separate?",
+      "solution": "E accepts, and A and C do not.",
+      "explanation": "The first partition separates accepting from non-accepting states, because the empty string tells them apart, and groups only ever split. Different NFA sets is tempting, but A and C also hold different sets and they still merge. The order states were found in has no effect, and a final group can hold any number of states.",
+      "difficulty": "easy",
+      "tags": ["minimization"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "dead-state-count",
+      "type": "mcq",
+      "prompt": "Over the alphabet {a, b}, how many states does the minimal complete DFA for a*b have? A complete DFA has a move on every symbol from every state.",
+      "options": ["2", "3", "4", "5"],
+      "answer": 1,
+      "hint": "After the b, what must happen if more input arrives?",
+      "solution": "3",
+      "explanation": "There is a state that loops on a, an accepting state reached by b, and a dead state for anything read after the b. 2 leaves out the dead state, which is what this tool draws because lexers do not need it, but the question asks for a complete DFA. 4 is the subset construction's three states plus a dead state, before A and B merge. 5 is the size of Thompson's NFA.",
+      "difficulty": "medium",
+      "tags": ["minimization", "dead-state", "state-count"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "firstpos-all-nullable",
+      "type": "mcq",
+      "prompt": "Augment a*b* to get a*b*#, with positions a = 1, b = 2 and # = 3. What is firstpos of the root?",
+      "options": ["{1}", "{1, 2}", "{1, 2, 3}", "{3}"],
+      "answer": 2,
+      "hint": "Which parts of the expression can match nothing at all?",
+      "solution": "{1, 2, 3}",
+      "explanation": "a* can match nothing, so a string may start with b. b* can match nothing too, so the string may be empty and the # can come first. {1} and {1, 2} stop too early, because they ignore that the left child of each cat node is nullable. {3} would be right only if a and b could never appear.",
+      "difficulty": "medium",
+      "tags": ["followpos", "nullable", "firstpos"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "direct-method-true",
+      "type": "mcq",
+      "prompt": "Which statement about the direct method is true?",
+      "options": [
+        "It builds a DFA from the syntax tree of (r)#, and the DFA may still have more states than the minimum",
+        "It always gives the minimal DFA",
+        "It needs Thompson's NFA as its input",
+        "It only works on expressions with no star"
+      ],
+      "answer": 0,
+      "hint": "Try it mentally on an expression with two different occurrences of the same symbol doing the same job, such as ab|cb.",
+      "solution": "It builds a DFA from the syntax tree of (r)#, and the DFA may still have more states than the minimum.",
+      "explanation": "On ab|cb, the direct method gives four states and the minimal DFA has three, because the two b positions stay separate. It happens to reach the minimum on (a|b)*abb, which is why people assume it always does. It uses no NFA, and star is one of the node types its rules cover.",
+      "difficulty": "medium",
+      "tags": ["direct-method", "minimization"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "explain-followpos",
+      "type": "short",
+      "prompt": "What does followpos(p) mean? Which two kinds of syntax-tree node add to it, and what does each one add?",
+      "hint": "Think about which symbol occurrences can sit next to each other in a string of the language.",
+      "solution": "followpos(p) is the set of positions that can come right after position p in some string of the language.\n\nA cat node: each position in lastpos of the left child gets all of firstpos of the right child.\nA star node: each position in lastpos of the node gets all of firstpos of the node.",
+      "explanation": "A cat node puts its left child right before its right child, and a star node lets its subexpression follow itself. Those are the only ways one position can come right after another, which is why or nodes and leaves add nothing. A good answer gives the meaning first, not only the rules.",
+      "difficulty": "medium",
+      "tags": ["followpos"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What three things does Thompson's construction guarantee about its NFA?",
+      "back": "At most twice as many states as operators and operands; one start state with no incoming edges and one accepting state with no outgoing edges; and each other state has one outgoing symbol edge or at most two outgoing ε-edges.",
+      "tags": ["thompson"]
+    },
+    {
+      "front": "What are ε-closure(T) and move(T, a)?",
+      "back": "ε-closure(T) is T plus every state reachable using only ε-edges. move(T, a) is the set of states reachable from T by one edge labeled a. The next DFA state is ε-closure(move(T, a)).",
+      "tags": ["subset-construction"]
+    },
+    {
+      "front": "Which language family shows the subset construction's exponential growth?",
+      "back": "(a|b)*a(a|b)...(a|b), where the nth symbol from the end is a. A small NFA can guess, but the minimal DFA needs 2^n states.",
+      "tags": ["exponential-growth"]
+    },
+    {
+      "front": "In partition refinement, what is the first partition, and when do two states stay in the same group?",
+      "back": "Start with accepting and non-accepting states. Two states stay together only if, on every input symbol, they move into the same group.",
+      "tags": ["minimization"]
+    },
+    {
+      "front": "What do nullable, firstpos, lastpos and followpos mean?",
+      "back": "nullable: the subtree can match the empty string. firstpos: positions that can match its first symbol. lastpos: positions that can match its last symbol. followpos(p): positions that can come right after position p.",
+      "tags": ["followpos"]
+    },
+    {
+      "front": "For (a|b)*abb, how many states are there at each stage?",
+      "back": "Thompson's NFA: 11. Subset construction: 5, named A to E. Minimal DFA: 4, with A and C merged. Direct method: 4.",
+      "tags": ["worked-example"]
+    }
+  ]
+}

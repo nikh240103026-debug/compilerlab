@@ -1,0 +1,202 @@
+---
+id: lexer-design
+module: lexical-analysis
+title: Designing a lexer
+order: 7
+estimatedMinutes: 30
+prerequisites:
+  - regex-to-dfa
+  - tokens-lexemes-patterns
+outcomes:
+  - Combine many token patterns into one automaton
+  - Apply longest match and rule priority to decide which token comes next
+  - Compare two ways of separating keywords from identifiers
+  - Explain why a lexer remembers its last accepting state, and how it backs up
+  - Compare table-driven and hand-coded lexers
+visualizers:
+  - id: token-stream
+    label: Token stream
+    props:
+      source: "aababba"
+      rules: |
+        R1  a     %keyword
+        R2  abb   %literal
+        R3  a*b+  %identifier
+---
+
+## Why this matters
+
+A real language has dozens of token patterns: keywords, identifiers, numbers, operators and more. The last lesson turned one pattern into one DFA, but a lexer needs more than that. At each point in the input it has to decide how many characters to take and which token they form, even when several patterns match.
+
+Running a separate DFA for each pattern would be slow, and it would not answer those questions. This lesson shows how a lexer combines all its patterns into one automaton, and the two simple rules that settle every ambiguity. Lex and Flex are built on this same design.
+
+## One automaton for all the patterns
+
+To combine the patterns:
+
+1. Build an NFA for each pattern, as in the last lesson.
+2. Add one new start state, with an ε-edge to the start state of each NFA.
+3. Label each accepting state with the pattern it belongs to.
+4. Run the subset construction on the result to get one DFA.
+
+Each DFA state is a set of NFA states, so it can hold the accepting states of several patterns at once. That means the text read so far matches all of those patterns. The DFA state then **announces** whichever of them was listed first.
+
+Minimizing this DFA takes one extra precaution. Two accepting states that announce different tokens must never merge, so the first partition has one group per token, plus one group for the states that announce nothing.
+
+## Simulating until no move remains
+
+A lexer does not stop at the first accepting state, because a longer match may lie ahead. It keeps reading until the DFA has no move on the next character, or the input ends. Only then is it certain no longer match exists.
+
+While reading, it remembers the most recent accepting state it passed through: how far the input had reached at that point, and which rule that state announced. Using the two pointers from the input buffering lesson, one scan looks like this:
+
+```text
+state = start state
+forward = lexemeBegin
+lastRule = none
+
+while there is a next character c and state has a move on c:
+    state = move(state, c)
+    forward = forward + 1
+    if state announces a rule:
+        lastRule = that rule
+        lastEnd = forward
+
+if lastRule is none:
+    report a lexical error
+else:
+    forward = lastEnd
+    emit a token for lastRule, with the text from lexemeBegin to lastEnd
+    lexemeBegin = lastEnd
+```
+
+Then the DFA goes back to its start state for the next lexeme. Press play in the visualizer and watch the "Longest match so far" line update as it reads.
+
+## Two rules settle every ambiguity
+
+1. **Longest match.** Take the longest prefix of the remaining input that matches any pattern. This is also called maximal munch.
+2. **Rule priority.** If several patterns match that longest prefix, take the one listed first.
+
+They apply in that order. Priority only breaks ties between matches of the same length, and it never lets a shorter match beat a longer one.
+
+## Keywords and identifiers
+
+The keyword `if` also fits the pattern for identifiers. There are two standard ways to tell them apart, and both assume keywords are reserved, meaning a program cannot use them as names.
+
+**Option 1: give each keyword a rule, listed before the identifier rule.**
+
+```text
+IF    if
+ELSE  else
+ID    [a-z][a-z0-9]*
+```
+
+On `if`, the rules `IF` and `ID` tie at two characters, so priority picks `IF`. On `iffy`, `ID` matches four characters and `IF` only two, so longest match picks `ID`, even though `IF` is listed first. The two rules together do exactly what you want.
+
+<TryIt visualizer="token-stream" source="if iffy else elsewhere x1" rules="IF    if              %keyword
+ELSE  else            %keyword
+ID    [a-z][a-z0-9]*  %identifier
+WS    [ \t\n]+        %skip">Try the keyword rules</TryIt>
+
+The order matters. If `ID` comes first, it wins every tie, so `IF` can never match. The visualizer warns you about this, and `if` comes out as an identifier.
+
+<TryIt visualizer="token-stream" source="if iffy else elsewhere x1" rules="ID    [a-z][a-z0-9]*  %identifier
+IF    if              %keyword
+ELSE  else            %keyword
+WS    [ \t\n]+        %skip">Try it with ID first</TryIt>
+
+**Option 2: use one identifier rule and a reserved-word table.** There is no rule for any keyword. Before scanning starts, the keywords are installed in a table, often the symbol table itself, along with the token each one stands for. When the identifier rule matches, the lexer looks up the lexeme. If it is there, the lexer returns that keyword's token. If not, it returns `id`.
+
+Option 2 keeps the automaton small, because keywords add no states. With `ID` as `[a-z]+`, the DFA has 2 states. Adding rules for `if`, `else` and `while` takes it to 13, and adding `for`, `int` and `return` as well takes it to 24. In exchange, every identifier costs one table lookup. Option 1 needs no lookup and no extra code, which suits a generated lexer.
+
+## Backing up
+
+Reading ahead for a longer match can fail. A number may have an exponent, so after `1E+` the lexer is still hoping for a digit. If an `x` comes next, the DFA is stuck in a state that announces nothing, having read two characters past the last real match.
+
+This is why the lexer remembers its last accepting state. It moves `forward` back to `lastEnd`, emits `1` as a number, and starts the next lexeme at `E`. Find the step in the visualizer that says "Back up 2 characters."
+
+<TryIt visualizer="token-stream" source="1E+x" rules="NUM   [0-9]+(E[-+]?[0-9]+)?  %literal
+ID    [A-Za-z]+               %identifier
+PLUS  \+                      %operator">Watch it back up</TryIt>
+
+## Table-driven and hand-coded lexers
+
+The same automaton can be written in two forms. A **table-driven** lexer is the loop above plus tables that say where each state goes on each character. The loop never changes, and a generator produces the tables. A **hand-coded** lexer spells out the automaton as ordinary code, where a position in the code acts as the state:
+
+```c
+case '<':
+    if (peek() == '=') { advance(); return LE; }
+    return LT;
+```
+
+| | Table-driven | Hand-coded |
+| --- | --- | --- |
+| Where the automaton lives | In generated tables | In the shape of the code |
+| Changing a token | Edit a pattern and regenerate | Edit the code by hand |
+| Risk of a slip | Low, because the tables are computed | Higher, because every case is written by hand |
+| Size | A full table has a row per state and a column per character, so generators compress it | No table, but more code |
+| Error messages | Generic unless you add more | Easy to make specific to the situation |
+
+Lex and Flex generate table-driven lexers. Many production compilers, including GCC and Clang, use hand-written lexers, which give them direct control over speed and error messages.
+
+## Worked example
+
+The Dragon Book uses this rule set, and it is loaded in the visualizer:
+
+```text
+R1  a
+R2  abb
+R3  a*b+
+```
+
+Combining the three patterns and running the subset construction gives a DFA with six states. The tags in the visualizer's rules only choose colors. An empty cell means no move.
+
+| State | On `a` | On `b` | Announces |
+| --- | --- | --- | --- |
+| A (start) | B | C | nothing |
+| B | D | E | R1 |
+| C | | C | R3 |
+| D | D | C | nothing |
+| E | | F | R3 |
+| F | | C | R2 |
+
+State F holds the accepting states of both R2 and R3, because `abb` matches both. R2 is listed first, so F announces R2.
+
+Now scan the input `aaba`:
+
+| Read | New state | Announces | Remembered match |
+| --- | --- | --- | --- |
+| `a` | B | R1 | `a`, by R1 |
+| `a` | D | nothing | still `a`, by R1 |
+| `b` | C | R3 | `aab`, by R3 |
+| `a` | no move from C | | stuck, so stop |
+
+The lexer emits `aab` as R3. The stuck character was never consumed, so there is nothing to back up. The next scan starts at the last `a`, reaches state B, and hits the end of the input, so it emits `a` as R1.
+
+<TryIt visualizer="token-stream" source="aaba" rules="R1  a     %keyword
+R2  abb   %literal
+R3  a*b+  %identifier">Run aaba</TryIt>
+
+Two more inputs show the other cases:
+
+- **Priority.** On `abb`, the scan ends in F, and R2 wins the tie with R3. The lexer emits `abb` as R2.
+- **Backing up.** On `aa`, the scan goes A, B, D, and then the input ends. D announces nothing, so the lexer backs up one character to the match it remembered from B and emits `a` as R1. The second `a` is then scanned on its own, so the result is two tokens.
+
+The input loaded when the visualizer opens, `aababba`, combines these. It produces `aab` by R3 through longest match, `abb` by R2 through priority, and `a` by R1.
+
+<TryIt visualizer="token-stream" source="aa" rules="R1  a     %keyword
+R2  abb   %literal
+R3  a*b+  %identifier">Run aa and find the back-up</TryIt>
+
+<Callout kind="textbook">
+The book runs this same rule set, and its DFA also has six states. It names each state by the NFA states it contains, and it numbers its NFA differently from this tool, so its state names will not match the letters here. Compare the shape of the machine and the tokens, not the labels. The book also describes stopping and then looking back through the states visited, which finds the same match as remembering the last accepting state as you go.
+</Callout>
+
+## Common mistakes
+
+- **Stopping at the first accepting state.** On `aaba`, state B accepts after one character, but the longest match is `aab`.
+- **Thinking rule order beats length.** Listing `IF` first does not make `iffy` split into `if` and `fy`. Length is checked first, and order only breaks ties.
+- **Thinking order always matters.** A rule for `>` can safely come before a rule for `>=`, because on `>=` the longer match wins anyway. Order matters only when two rules can match the same text.
+- **Putting a general rule above a specific one.** With `ID` before `IF`, `IF` can never match.
+- **Expecting the lexer to find a split that works overall.** With rules for `a`, `ab` and `bc`, the input `abc` could be read as `a` then `bc`. The lexer takes `ab`, the longest match, and never reconsiders, so `c` becomes a lexical error.
+- **Forgetting to back up.** If the scan ends in a state that announces nothing, the characters read since the last accepting state still belong to later lexemes, and they must be read again.
+- **Merging different tokens when minimizing.** Accepting states that announce different tokens are not equivalent, even if all their moves match.

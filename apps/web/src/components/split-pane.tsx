@@ -74,7 +74,10 @@ export function SplitPane({
   };
 
   const style: CSSProperties | undefined = sideBySide
-    ? { gridTemplateColumns: `minmax(0, ${ratio}fr) 0.75rem minmax(0, ${1 - ratio}fr)` }
+    ? {
+        gridTemplateColumns: `minmax(0, ${ratio}fr) 0.75rem minmax(0, ${1 - ratio}fr)`,
+        gridTemplateRows: 'minmax(0, 1fr)',
+      }
     : undefined;
 
   return (

@@ -21,6 +21,8 @@ export interface AppConfig {
   geminiModel: string;
   rootDir: string;
   dataDir: string;
+  /** Lessons and question banks. */
+  contentDir: string;
   dbDriver: DbDriver | undefined;
   version: string;
 }
@@ -55,6 +57,7 @@ export function loadConfig(env: Record<string, string | undefined>, rootDir: str
     geminiModel: values.GEMINI_MODEL,
     rootDir,
     dataDir: resolve(rootDir, values.COMPILERLAB_DATA_DIR),
+    contentDir: join(rootDir, 'packages', 'content'),
     dbDriver: values.SQLITE_DRIVER,
     version: JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8')).version,
   };

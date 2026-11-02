@@ -1,5 +1,6 @@
-import type { CourseModule } from '@compilerlab/shared';
-import { ArrowLeft, ArrowRight, Compass, Workflow } from 'lucide-react';
+import type { CourseModule, LessonSummary } from '@compilerlab/shared';
+import { isTopicComplete, topicMastery } from '@compilerlab/shared/progress';
+import { ArrowLeft, ArrowRight, CircleCheck, Clock, Compass, Workflow } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorPanel } from '@/components/error-panel';
@@ -9,10 +10,56 @@ import { SplitPane } from '@/components/split-pane';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLessons, useProgress } from '@/hooks/use-lessons';
 import { useModules } from '@/hooks/use-system';
 import { describeError } from '@/lib/api';
 
-function Overview({ module }: { module: CourseModule }) {
+function LessonList({ lessons }: { lessons: readonly LessonSummary[] }) {
+  const { data: progress = [] } = useProgress();
+  return (
+    <ol className="space-y-1.5">
+      {lessons.map((lesson) => {
+        const mine = progress.find((item) => item.topicId === lesson.id);
+        const hasVisualizer = lesson.visualizers.length > 0;
+        const complete = isTopicComplete(mine, hasVisualizer);
+        return (
+          <li key={lesson.id}>
+            <Link
+              to={`/learn/${lesson.module}/${lesson.id}`}
+              className="flex items-center gap-3 rounded-md border border-line bg-surface p-3 text-sm transition-colors duration-(--duration-fast) hover:border-line-strong hover:bg-surface-2"
+            >
+              {complete ? (
+                <CircleCheck aria-label="Complete" className="size-4 shrink-0 text-success" />
+              ) : (
+                <span className="w-4 shrink-0 text-center font-mono text-xs text-ink-muted">
+                  {lesson.order}
+                </span>
+              )}
+              <span className="min-w-0 flex-1 font-medium">{lesson.title}</span>
+              {mine ? (
+                <span className="font-mono text-xs text-ink-muted">
+                  {topicMastery(mine, hasVisualizer)}%
+                </span>
+              ) : null}
+              <span className="flex shrink-0 items-center gap-1 text-xs text-ink-muted">
+                <Clock aria-hidden="true" className="size-3" />
+                {lesson.estimatedMinutes} min
+              </span>
+            </Link>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function Overview({
+  module,
+  lessons,
+}: {
+  module: CourseModule;
+  lessons: readonly LessonSummary[];
+}) {
   return (
     <div className="p-6">
       <p className="eyebrow mb-2 flex items-center gap-2">
@@ -22,20 +69,26 @@ function Overview({ module }: { module: CourseModule }) {
       <h1 className="text-[1.75rem] font-semibold">{module.title}</h1>
       <p className="mt-2 text-ink-muted">{module.summary}</p>
       <p className="mt-3 flex flex-wrap gap-2">
-        <Badge tone="accent">Lessons arrive in Milestone {module.lessonsMilestone}</Badge>
+        {lessons.length === 0 ? (
+          <Badge tone="accent">Lessons arrive in Milestone {module.lessonsMilestone}</Badge>
+        ) : null}
         {module.optional ? <Badge>Optional track</Badge> : null}
       </p>
       <h2 className="mt-8 mb-3 text-base font-semibold">Topics</h2>
-      <ol className="space-y-2">
-        {module.topics.map((topic, index) => (
-          <li key={topic} className="flex gap-3 text-sm">
-            <span className="w-5 shrink-0 text-right font-mono text-xs leading-5 text-ink-muted">
-              {index + 1}
-            </span>
-            {topic}
-          </li>
-        ))}
-      </ol>
+      {lessons.length > 0 ? (
+        <LessonList lessons={lessons} />
+      ) : (
+        <ol className="space-y-2">
+          {module.topics.map((topic, index) => (
+            <li key={topic} className="flex gap-3 text-sm">
+              <span className="w-5 shrink-0 text-right font-mono text-xs leading-5 text-ink-muted">
+                {index + 1}
+              </span>
+              {topic}
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }
@@ -68,6 +121,7 @@ function Visualizers({ module }: { module: CourseModule }) {
 export function Component() {
   const { moduleId } = useParams();
   const { data: modules, error, refetch } = useModules();
+  const { data: allLessons = [] } = useLessons();
 
   if (error) {
     return (
@@ -122,7 +176,12 @@ export function Component() {
           storageKey="learn-module"
           label="Resize the lesson and visualizer panes"
           defaultRatio={0.58}
-          start={<Overview module={module} />}
+          start={
+            <Overview
+              module={module}
+              lessons={allLessons.filter((lesson) => lesson.module === module.id)}
+            />
+          }
           end={<Visualizers module={module} />}
         />
       </div>

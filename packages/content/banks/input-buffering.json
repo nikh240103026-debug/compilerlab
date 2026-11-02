@@ -1,0 +1,256 @@
+{
+  "summary": [
+    "One system call per character would be very slow, so a lexer reads a block of N characters at a time into a buffer.",
+    "A lexer needs lookahead because it often cannot tell that a lexeme has ended until it has seen the next character, as with identifiers and with operators such as < and <=.",
+    "A buffer pair uses two buffers reloaded in turn, with lexemeBegin marking the start of the current lexeme and forward scanning ahead. A lexeme cannot be overwritten as long as its length plus the lookahead is at most N.",
+    "Without sentinels, each character costs two tests: one for the end of the buffer and one for which character it is. A sentinel at the end of each buffer merges these into one test for ordinary characters.",
+    "An eof at the end of a buffer means reload the other buffer. An eof anywhere else means the input has ended."
+  ],
+  "practice": [
+    {
+      "id": "count-reloads",
+      "type": "mcq",
+      "prompt": "A lexer uses a buffer pair with N = 8. The input is 25 characters long:\n\ntotal = total + step * 10\n\nHow many reloads happen after the first load of Buffer 1?",
+      "options": ["2", "3", "4", "7"],
+      "answer": 1,
+      "hint": "Work out how the 25 characters divide into blocks of 8. Is the first load a reload?",
+      "solution": "3 reloads.",
+      "explanation": "25 characters need 4 loads: 8, 8, 8 and 1. The first of these is the initial load, so 3 are reloads. Answering 4 counts the initial load as well. Answering 2 forgets the last block, which holds only 1 character but still needs a load. 7 is the number of lexemes, which does not decide when a reload happens.",
+      "difficulty": "easy",
+      "tags": ["buffer-pair", "counting"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "count-tests-totals",
+      "type": "mcq",
+      "prompt": "Use the same input and N = 8, reading all the way to the final eof. Count tests like this. Without sentinels: 2 for each character. With sentinels: 1 each time forward looks at a cell, including each eof it reaches.\n\nWhat are the two totals, in that order?",
+      "options": ["50 and 25", "50 and 28", "50 and 29", "25 and 29"],
+      "answer": 2,
+      "hint": "With sentinels, count the characters first. Then add one test for every eof that forward reaches, and do not forget the last one.",
+      "solution": "50 without sentinels, and 29 with sentinels.",
+      "explanation": "Without sentinels: 2 × 25 = 50. With sentinels: 25 characters, plus 3 eofs that cause a reload, plus the final eof, gives 29. Answering 25 ignores the eofs, and 28 forgets the final one. The last option counts one test per character for the first total, but that is the sentinel scheme's cost, not the cost without sentinels.",
+      "difficulty": "medium",
+      "tags": ["sentinels", "counting"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "safe-lexeme-length",
+      "type": "mcq",
+      "prompt": "A lexer uses a buffer pair with N = 4096, and needs one character of lookahead. What is the longest lexeme that the book's rule guarantees will not be overwritten?",
+      "options": ["4095", "4096", "8191", "8192"],
+      "answer": 0,
+      "hint": "The rule limits the lexeme's length plus the lookahead distance.",
+      "solution": "4095 characters.",
+      "explanation": "The rule is length + lookahead ≤ N, so length ≤ 4096 - 1. Answering 4096 forgets the lookahead. The answers near 8192 assume two buffers double the limit, but they do not: when forward leaves the second buffer, the next reload can overwrite the first, which may hold the start of the lexeme.",
+      "difficulty": "medium",
+      "tags": ["buffer-pair", "lookahead"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "trace-alpha-beta",
+      "type": "short",
+      "prompt": "A lexer uses a buffer pair with N = 4 on this input, treating whitespace as the separator between lexemes:\n\nalpha beta\n\nBuffer 1 starts with alph. Forward has just reached the eof at the end of Buffer 1.\n\n(a) What happens next?\n(b) Where is lexemeBegin at this moment, and why has it not moved?\n(c) What does Buffer 1 hold once all the input has been read?",
+      "hint": "The next character is not in memory yet. After that, follow the input in blocks of 4 characters, and remember that the two buffers take turns.",
+      "solution": "(a) The eof is at the end of a buffer, so the lexer loads the next block, a be, into Buffer 2 and moves forward to the start of Buffer 2.\n(b) lexemeBegin is at the a in the first slot of Buffer 1. It has not moved because the lexeme alpha is not finished.\n(c) Buffer 1 is reloaded with the last block, so it holds ta followed by eof.",
+      "explanation": "You can check all of this in the visualizer, using size 4. Note that alpha crosses from Buffer 1 into Buffer 2, and its start is safe because the reload went into the other buffer. In part (c), it is tempting to say Buffer 2, but the buffers alternate, so the third block goes back into Buffer 1.",
+      "difficulty": "medium",
+      "tags": ["pointers", "buffer-pair"],
+      "exams": ["university"]
+    },
+    {
+      "id": "why-position-fails",
+      "type": "short",
+      "prompt": "A lexer uses a buffer pair with N = 4 and keeps only the two pointers, with no separate copy of the lexeme. The input begins:\n\nposition = initial\n\nExplain what goes wrong while the lexer reads the first lexeme.",
+      "hint": "Write out which characters each load brings in, and find the moment when the lexer has not yet seen the end of the lexeme.",
+      "solution": "Buffer 1 holds posi and Buffer 2 holds tion. When forward reaches the eof at the end of Buffer 2, the lexeme has not been seen to end, so the lexer reloads Buffer 1 with the next block, = i. This overwrites posi, while lexemeBegin still points into Buffer 1. The start of the lexeme is lost.",
+      "explanation": "The lexeme has 8 characters and needs one of lookahead, which is 9 in total, more than N = 4. That breaks the rule. Two buffers do not help, because the next reload has to go somewhere, and the only other buffer is the one holding the start of the lexeme.",
+      "difficulty": "medium",
+      "tags": ["buffer-pair", "lookahead"],
+      "exams": ["university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "why-blocks",
+      "type": "mcq",
+      "prompt": "What is the main reason a lexer reads a block of N characters at once?",
+      "options": [
+        "It lets the lexer skip comments without reading them",
+        "One system read can fetch N characters, instead of one system call per character",
+        "It removes the need for lookahead",
+        "It makes every lexeme exactly N characters long"
+      ],
+      "answer": 1,
+      "hint": "Think about what is expensive when a program reads from a file.",
+      "solution": "One system read can fetch N characters, instead of one system call per character.",
+      "explanation": "System calls are slow compared with reading from memory, so fetching many characters per call saves time. Comments must still be read, or the lexer would not know where they end. Lookahead is still needed, and buffering just makes it cheap. Lexemes have nothing to do with the block size.",
+      "difficulty": "easy",
+      "tags": ["buffering"],
+      "exams": ["university"]
+    },
+    {
+      "id": "why-lookahead",
+      "type": "mcq",
+      "prompt": "A C lexer has just read < and has a valid match for the less-than operator. Why can it not return the token yet?",
+      "options": [
+        "The next character might make the lexeme <=",
+        "The parser has not asked for a token yet",
+        "It must first look up < in the symbol table",
+        "A token must be at least two characters long"
+      ],
+      "answer": 0,
+      "hint": "Which other C operators begin with this character?",
+      "solution": "The next character might make the lexeme <=.",
+      "explanation": "The longest match wins, so the lexer must see the next character before deciding. The parser's request is what started the scan in the first place. Operators are not looked up in the symbol table, and many tokens are a single character, such as ;.",
+      "difficulty": "easy",
+      "tags": ["lookahead"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "pointer-roles",
+      "type": "mcq",
+      "prompt": "What do the two pointers do while the lexer scans a lexeme?",
+      "options": [
+        "Both move forward together, one character apart",
+        "lexemeBegin moves ahead while forward waits at the start",
+        "lexemeBegin stays at the first character while forward moves ahead",
+        "lexemeBegin jumps to the end of the buffer while forward moves ahead"
+      ],
+      "answer": 2,
+      "hint": "The lexeme is the text between the two pointers. How can that text grow?",
+      "solution": "lexemeBegin stays at the first character while forward moves ahead.",
+      "explanation": "The text between the pointers is the lexeme so far, so the start must stay fixed while the end moves. If they moved together, the gap between them could not grow. The second option has the names the wrong way round. The fourth would lose the start of the lexeme.",
+      "difficulty": "easy",
+      "tags": ["pointers"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "after-lexeme",
+      "type": "mcq",
+      "prompt": "The lexer has found the lexeme **, but forward has gone one character past it. What happens next?",
+      "options": [
+        "lexemeBegin is set to the current position of forward, and forward stays where it is, so the extra character is skipped",
+        "forward is moved back to the right end of the lexeme, and lexemeBegin is then set to the character just after the lexeme",
+        "forward is moved back to the start of the lexeme, and lexemeBegin stays where it is",
+        "Both pointers go back to the start of the buffer"
+      ],
+      "answer": 1,
+      "hint": "No character may be lost, and the next lexeme must start in the right place.",
+      "solution": "forward is moved back to the right end of the lexeme, and lexemeBegin is then set to the character just after the lexeme.",
+      "explanation": "The extra character belongs to the next lexeme, so forward has to back up. Skipping it, as the first option does, would lose that character. Going back to the start of the lexeme, as the third does, would make the lexer read the same lexeme again. The fourth would rescan text that is already done.",
+      "difficulty": "medium",
+      "tags": ["pointers", "lookahead"],
+      "exams": ["university"]
+    },
+    {
+      "id": "why-two-buffers",
+      "type": "mcq",
+      "prompt": "Why does the scheme use two buffers, not one?",
+      "options": [
+        "One buffer holds the source text, and the other holds the token stream",
+        "A lexeme may cross the end of a block, and its start must survive when the next block is loaded",
+        "The two buffers let lexemes be up to 2N characters long with no risk",
+        "Each pointer needs its own buffer"
+      ],
+      "answer": 1,
+      "hint": "Picture a lexeme that begins near the end of the block. What would happen if the next block replaced that same memory?",
+      "solution": "A lexeme may cross the end of a block, and its start must survive when the next block is loaded.",
+      "explanation": "The next block goes into the other buffer, so the start of the lexeme stays in place. Both buffers hold source text, not tokens. The guarantee is only for length plus lookahead of at most N, not 2N. Both pointers can be in the same buffer, and usually are.",
+      "difficulty": "easy",
+      "tags": ["buffer-pair"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "tests-per-character",
+      "type": "mcq",
+      "prompt": "A lexer reads 1000 ordinary characters, none of them at the end of a buffer. How many tests does it make, first without sentinels, then with sentinels?",
+      "options": ["1000 and 1000", "2000 and 2000", "2000 and 1000", "1000 and 500"],
+      "answer": 2,
+      "hint": "Without sentinels, what two things must be checked for each character? Which of them does a sentinel make unnecessary?",
+      "solution": "2000 without sentinels, and 1000 with sentinels.",
+      "explanation": "Without sentinels, each character costs a test for the end of the buffer and a test for which character it is. With sentinels, only the second remains for an ordinary character. 1000 and 1000 forgets the end-of-buffer test in the first case, and 2000 and 2000 assumes sentinels save nothing. 1000 and 500 cannot be right, because each character always needs at least one test.",
+      "difficulty": "easy",
+      "tags": ["sentinels", "counting"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "eof-meaning",
+      "type": "mcq",
+      "prompt": "forward reads eof in the middle of a buffer, not at its end. What does this mean?",
+      "options": [
+        "Reload the other buffer",
+        "A lexical error has occurred",
+        "Move forward back by one character",
+        "The input has ended"
+      ],
+      "answer": 3,
+      "hint": "Where does the sentinel sit when a buffer has been filled completely? How is this position different?",
+      "solution": "The input has ended.",
+      "explanation": "An eof at the end of a buffer means reload, so the first option is what would happen in the other position. An eof elsewhere appears only because fewer than N characters remained in the file. It is not an error, since all input ends this way, and there is no reason to back up.",
+      "difficulty": "easy",
+      "tags": ["sentinels"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "sentinel-requirement",
+      "type": "mcq",
+      "prompt": "What must be true of the character used as a sentinel?",
+      "options": [
+        "It must be a whitespace character",
+        "It cannot be part of the source program",
+        "It must be different in each of the two buffers",
+        "It must be a printable character"
+      ],
+      "answer": 1,
+      "hint": "What would go wrong if the same character could turn up in ordinary code?",
+      "solution": "It cannot be part of the source program.",
+      "explanation": "If the character could appear in the source, the lexer could not tell real input from the marker. Whitespace is common in source programs, so it would be a poor choice, and printable characters are too. The two buffers can use the same sentinel, because the lexer tells them apart by checking where forward is.",
+      "difficulty": "easy",
+      "tags": ["sentinels"],
+      "exams": ["university"]
+    },
+    {
+      "id": "explain-sentinels",
+      "type": "short",
+      "prompt": "Explain how sentinels reduce the number of tests a lexer makes per character. Say what still has to be tested when forward reaches a sentinel.",
+      "hint": "Start from the two tests made without sentinels. Then say which of them can be folded into the other, and how.",
+      "solution": "Without sentinels, each character needs two tests: has forward moved off the end of the buffer, and which character is it? A sentinel is a special character, usually eof, placed in an extra slot at the end of each buffer. The lexer then tests only which character it read, and eof is just one case of that test. Ordinary characters cost one test.\nWhen the character is eof, the lexer checks where it is. At the end of the first buffer, it reloads the second. At the end of the second buffer, it reloads the first. Anywhere else, the input has ended.",
+      "explanation": "A good answer does not say the end-of-buffer check has gone. It has moved inside the eof case, which runs about once per N characters, so the extra work is small.",
+      "difficulty": "medium",
+      "tags": ["sentinels"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Why not read one character per system call?",
+      "back": "System calls are slow compared with reading memory. One system read can fetch a whole block of N characters instead.",
+      "tags": ["buffering"]
+    },
+    {
+      "front": "What do lexemeBegin and forward do?",
+      "back": "lexemeBegin marks the start of the current lexeme. forward scans ahead until a pattern match is found.",
+      "tags": ["pointers"]
+    },
+    {
+      "front": "Why does a lexer use two buffers?",
+      "back": "A lexeme can cross the end of a block. The next block goes into the other buffer, so the start of the lexeme is not overwritten.",
+      "tags": ["buffer-pair"]
+    },
+    {
+      "front": "What limit keeps a lexeme safe in a buffer pair?",
+      "back": "Its length plus the lookahead distance must be at most N.",
+      "tags": ["buffer-pair", "lookahead"]
+    },
+    {
+      "front": "How many tests per ordinary character, without and with sentinels?",
+      "back": "Two without sentinels: one for the end of the buffer and one for which character. One with sentinels: which character.",
+      "tags": ["sentinels"]
+    },
+    {
+      "front": "What does eof mean, depending on where forward finds it?",
+      "back": "At the end of a buffer: reload the other buffer. Anywhere else: the input has ended.",
+      "tags": ["sentinels"]
+    }
+  ]
+}

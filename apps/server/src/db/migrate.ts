@@ -19,6 +19,19 @@ export const MIGRATIONS: readonly Migration[] = [
       ) STRICT;
     `,
   },
+  {
+    version: 2,
+    name: 'topic_progress',
+    sql: `
+      CREATE TABLE topic_progress (
+        topic_id TEXT PRIMARY KEY,
+        read_at TEXT,
+        visualizer_at TEXT,
+        best_quiz_score INTEGER,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      ) STRICT;
+    `,
+  },
 ];
 
 export class DatabaseTooNewError extends Error {

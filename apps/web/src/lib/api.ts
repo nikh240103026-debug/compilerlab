@@ -2,9 +2,13 @@ import type {
   ApiErrorBody,
   CourseModule,
   HealthResponse,
+  LessonSummary,
   Settings,
   SettingsPatch,
   SystemStatus,
+  TopicBank,
+  TopicProgress,
+  TopicProgressPatch,
 } from '@compilerlab/shared';
 
 export class ApiError extends Error {
@@ -62,6 +66,12 @@ export const api = {
   resetSettings: () => send<Settings>('POST', '/api/settings/reset'),
   modules: () => request<CourseModule[]>('/api/content/modules'),
   systemStatus: () => request<SystemStatus>('/api/system/status'),
+  lessons: () => request<LessonSummary[]>('/api/content/lessons'),
+  topicBank: (topicId: string) =>
+    request<TopicBank>(`/api/content/lessons/${encodeURIComponent(topicId)}/bank`),
+  progress: () => request<TopicProgress[]>('/api/progress'),
+  updateProgress: (topicId: string, patch: TopicProgressPatch) =>
+    send<TopicProgress>('PATCH', `/api/progress/${encodeURIComponent(topicId)}`, patch),
 };
 
 /** Turns anything that was thrown into a sentence a student can read. */

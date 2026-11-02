@@ -1,0 +1,277 @@
+{
+  "summary": [
+    "A Lex file has three sections separated by %%: declarations, rules and user code. Flex turns it into lex.yy.c, which contains the scanning function yylex.",
+    "Lex patterns differ from ordinary regular expressions in several ways: double quotes make text literal, {name} expands a definition, an unquoted space ends the pattern, and \\d is just the letter d.",
+    "An action reads the lexeme from yytext and its length from yyleng, and passes an attribute value to the parser through yylval. yywrap decides what happens when the input runs out.",
+    "Ambiguity is settled by longest match and then first rule. Start conditions, declared with %s or %x and entered with BEGIN, switch which rules are active.",
+    "With Yacc, yyparse calls yylex for each token. The return value is the token code, yylval carries the attribute, and a return of 0 means the end of the input."
+  ],
+  "practice": [
+    {
+      "id": "regex-line-comment",
+      "type": "regex",
+      "prompt": "Write a Lex pattern for a // comment: two slashes, then everything up to but not including the newline. Use quotes for the slashes. Do not include the newline in the match.",
+      "reference": "\"//\"[^\\n]*",
+      "accepts": ["//", "// hi", "//x//y"],
+      "rejects": ["", "/", "/ /", "// a\nb"],
+      "hint": "Quote the part that must appear literally. Then you need a class for any character except one.",
+      "solution": "\"//\"[^\\n]*",
+      "explanation": "The quotes make the slashes literal, which also keeps them from being read as Lex's trailing context operator. [^\\n]* then runs up to the newline without taking it. .* would also work in Lex, because . excludes the newline. A [^\\n]+ is the tempting mistake, since it rejects an empty // comment.",
+      "difficulty": "easy",
+      "tags": ["regex", "comments"],
+      "exams": ["university"]
+    },
+    {
+      "id": "regex-hex-literal",
+      "type": "regex",
+      "prompt": "Write a Lex pattern for a C hexadecimal integer: 0x or 0X, then one or more hexadecimal digits, with letters in either case.",
+      "reference": "0[xX][0-9a-fA-F]+",
+      "accepts": ["0x1F", "0Xff", "0x0"],
+      "rejects": ["", "0x", "x1F", "1F", "0xG"],
+      "hint": "Use one small class for the second character, and a larger class with three ranges for the digits.",
+      "solution": "0[xX][0-9a-fA-F]+",
+      "explanation": "The + requires at least one digit, so 0x alone is rejected. Using * would accept 0x, and leaving out A-F would reject 0X1F. Inside a class, the ranges simply sit next to each other, with no separator.",
+      "difficulty": "easy",
+      "tags": ["regex", "literals"],
+      "exams": ["university"]
+    },
+    {
+      "id": "regex-block-comment",
+      "type": "regex",
+      "prompt": "Write one pattern, with no start conditions, for a C block comment: /* then any text then the first */ that follows. The comment may span lines, and may contain stars and slashes.",
+      "reference": "\"/*\"([^*]|\\*+[^*/])*\\*+\"/\"",
+      "accepts": ["/**/", "/* a */", "/***/", "/* * */", "/*/ */", "/* a\nb */", "/*x**/"],
+      "rejects": ["", "/*", "/*/", "/* */ */", "*/", "/* a *"],
+      "hint": "Describe the inside as a repeated choice: either a character that is not a star, or a run of stars followed by something that cannot complete the closing. Then finish with a run of stars and a slash.",
+      "solution": "\"/*\"([^*]|\\*+[^*/])*\\*+\"/\"",
+      "explanation": "Inside the comment, a character is either not a star, or it is part of a run of stars followed by anything except a slash, which would end the comment. The closing is one or more stars and then a slash, which also handles /***/. The tempting \"/*\".*\"*/\" fails twice: . stops at a newline, and longest match would run on to the last */ on the line, so /* */ */ would match as one comment. This difficulty is why people use a start condition instead.",
+      "difficulty": "hard",
+      "tags": ["regex", "comments", "start-conditions"],
+      "exams": ["university"]
+    },
+    {
+      "id": "write-count-rules",
+      "type": "short",
+      "prompt": "Write the rules section of a Flex program that counts integers and identifiers, and ignores everything else. An identifier is a letter followed by letters or digits. Assume int ints = 0, ids = 0; is declared, and that a letter or digit run such as 12ab may be split.",
+      "hint": "You need a rule for each kind of thing you count, and something for all the other characters, including newlines.",
+      "solution": "[0-9]+                  { ints++; }\n[a-zA-Z][a-zA-Z0-9]*    { ids++; }\n.|\\n                    { /* ignore */ }",
+      "explanation": "Without the last rule, the default rule would copy every other character to the output. Writing . alone is the common slip, because . does not match a newline, so newlines would still be copied. No action has a return, so a single call to yylex runs through the whole input. On 12ab, the first rule takes 12 and the second takes ab.",
+      "difficulty": "medium",
+      "tags": ["flex", "rules"],
+      "exams": ["university"]
+    },
+    {
+      "id": "why-exclusive-for-strings",
+      "type": "short",
+      "prompt": "A scanner has an unprefixed rule [a-z]+ { return ID; }. You add a start condition for the inside of string literals, with the rules <str>\\\" to leave it and <str>. to collect each character. Why should it be declared with %x rather than %s? Use the string \"abc\" to explain.",
+      "hint": "In each case, which rules are active once the scanner is inside the string? Then apply longest match to abc.",
+      "solution": "With %s, the unprefixed rule [a-z]+ stays active inside the string. On abc it matches three characters and <str>. matches only one, so longest match picks [a-z]+ and returns an ID in the middle of the string.\n\nWith %x, only the rules prefixed with <str> are active, so <str>. takes each character as intended.",
+      "explanation": "Listing the <str> rules first does not help with %s, because length is checked before order. The answer needs both ideas: which rules are active, and that longest match decides between them.",
+      "difficulty": "medium",
+      "tags": ["start-conditions", "longest-match"],
+      "exams": ["university"]
+    },
+    {
+      "id": "trace-word-counter",
+      "type": "mcq",
+      "prompt": "Run this lesson's word counter on an input made of a, a space, bb, a newline and another newline. What does it print?",
+      "options": [
+        "1 lines, 2 words, 5 characters",
+        "2 lines, 2 words, 4 characters",
+        "2 lines, 2 words, 6 characters",
+        "2 lines, 3 words, 6 characters"
+      ],
+      "answer": 2,
+      "hint": "List the lexemes in order, and then add up each counter. Which rule takes the single letter a?",
+      "solution": "2 lines, 2 words, 6 characters",
+      "explanation": "The lexemes are a by {WORD}, the space by ., bb by {WORD}, and two newlines by \\n. Both newlines count as lines even though the second line is empty, and each adds to the character count, for 6 in total. 1 line and 5 characters misses the empty line. 4 characters leaves out the newlines. 3 words counts the empty line as a word, and {WORD} never matches a newline.",
+      "difficulty": "medium",
+      "tags": ["flex", "trace"],
+      "exams": ["university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "section-separator",
+      "type": "mcq",
+      "prompt": "What separates the three sections of a Lex file?",
+      "options": [
+        "A line containing only %%",
+        "The markers %{ and %}",
+        "A blank line",
+        "The keyword section"
+      ],
+      "answer": 0,
+      "hint": "The answer appears twice in every complete file.",
+      "solution": "A line containing only %%",
+      "explanation": "%{ and %} are real markers, which is why they are tempting, but they enclose C code to copy into the output, inside a section. Blank lines have no structural meaning, and there is no section keyword.",
+      "difficulty": "easy",
+      "tags": ["file-structure"],
+      "exams": ["university"]
+    },
+    {
+      "id": "lexeme-text-variable",
+      "type": "mcq",
+      "prompt": "Inside an action, which variable holds the characters of the current lexeme?",
+      "options": ["yylval", "yyleng", "yytext", "yyin"],
+      "answer": 2,
+      "hint": "The name says what it holds.",
+      "solution": "yytext",
+      "explanation": "yyleng holds only the length of that text. yylval is for passing an attribute value to the parser, so it holds whatever you put in it, not the lexeme. yyin is the file being read.",
+      "difficulty": "easy",
+      "tags": ["yytext"],
+      "exams": ["university"]
+    },
+    {
+      "id": "yylval-purpose",
+      "type": "mcq",
+      "prompt": "A rule for numbers has the action { yylval = atoi(yytext); return NUMBER; }. What is yylval doing here?",
+      "options": [
+        "Telling the parser which kind of token this is",
+        "Storing the length of the lexeme",
+        "Choosing the next start condition",
+        "Carrying the number's value to the parser"
+      ],
+      "answer": 3,
+      "hint": "The parser gets two pieces of information from this action. Which is which?",
+      "solution": "Carrying the number's value to the parser.",
+      "explanation": "This is the token's attribute value. The kind of token is the return value, NUMBER, which is why the first option is tempting but wrong. The length is yyleng, and start conditions change only with BEGIN.",
+      "difficulty": "easy",
+      "tags": ["yylval", "yacc"],
+      "exams": ["university"]
+    },
+    {
+      "id": "yywrap-returns-one",
+      "type": "mcq",
+      "prompt": "The input runs out and yywrap returns 1. What happens next?",
+      "options": [
+        "The scanner reopens the same file",
+        "yylex returns 0 to its caller",
+        "yylex returns 1 to its caller",
+        "Flex reports an error"
+      ],
+      "answer": 1,
+      "hint": "A return of 1 from yywrap means there is nothing more to read.",
+      "solution": "yylex returns 0 to its caller.",
+      "explanation": "Returning 1 from yywrap says there is no more input, and yylex then returns 0, which a parser treats as the end of the input. It is easy to think the 1 is passed along, but yywrap's return value only tells the scanner whether to stop. Returning 0 is what asks it to continue, and running out of input is not an error.",
+      "difficulty": "medium",
+      "tags": ["yywrap"],
+      "exams": ["university"]
+    },
+    {
+      "id": "rule-order-tie",
+      "type": "mcq",
+      "prompt": "A Flex file has the rule [a-z]+ { return ID; } and then the rule \"if\" { return IF; }. What happens on the input if?",
+      "options": [
+        "It returns ID, because the two rules tie and the first one listed wins",
+        "It returns IF, because quoted text takes priority",
+        "It returns IF, because that pattern is more specific",
+        "It reports an ambiguity error at run time"
+      ],
+      "answer": 0,
+      "hint": "Compare the lengths of the two matches first.",
+      "solution": "It returns ID, because the two rules tie and the first one listed wins.",
+      "explanation": "Both rules match two characters, so the tie goes to the rule listed first. Quoting has nothing to do with priority, and neither does being more specific. There is no error at run time, although Flex warns when generating the scanner that the second rule cannot be matched.",
+      "difficulty": "easy",
+      "tags": ["longest-match", "rule-priority"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "quoted-pattern-meaning",
+      "type": "mcq",
+      "prompt": "What does the Lex pattern \"a+b\" match?",
+      "options": [
+        "One or more a's, followed by b",
+        "Exactly the three characters a, + and b",
+        "A double quote, then one or more a's, then b, then a double quote",
+        "Either a or b"
+      ],
+      "answer": 1,
+      "hint": "In Lex, double quotes change what the characters inside them mean.",
+      "solution": "Exactly the three characters a, + and b.",
+      "explanation": "Inside double quotes, operators lose their meaning, so + is a literal plus. One or more a's would be a+b with no quotes. The third option is what you would expect in a regex dialect where quotes are ordinary characters, which Lex is not.",
+      "difficulty": "easy",
+      "tags": ["regex-syntax"],
+      "exams": ["university"]
+    },
+    {
+      "id": "exclusive-condition-rules",
+      "type": "mcq",
+      "prompt": "A scanner is in a start condition declared with %x. Which rules can match?",
+      "options": [
+        "All rules, but the ones marked with that condition are tried first",
+        "Only rules with no prefix",
+        "Only rules marked with that condition",
+        "Every rule in the file, in the order listed"
+      ],
+      "answer": 2,
+      "hint": "The x stands for exclusive. What does that exclude?",
+      "solution": "Only rules marked with that condition.",
+      "explanation": "An exclusive condition turns off rules with no prefix. All rules being active, as in the first option, is close to what %s does, except that rules are not tried in a special order: longest match still decides. A rule marked with <*> counts as marked for every condition.",
+      "difficulty": "medium",
+      "tags": ["start-conditions"],
+      "exams": ["university"]
+    },
+    {
+      "id": "definition-without-braces",
+      "type": "mcq",
+      "prompt": "A Lex file defines digit [0-9]. A rule then uses the pattern digit+ with no braces. What does that pattern match?",
+      "options": [
+        "One or more digits",
+        "The word digit, one or more times",
+        "The letters digi, then one or more t's",
+        "Nothing, because Flex rejects it"
+      ],
+      "answer": 2,
+      "hint": "Without braces, is digit a name or just five characters? And which part of the pattern does the + apply to?",
+      "solution": "The letters digi, then one or more t's.",
+      "explanation": "Only braces expand a definition, so without them these are plain letters, and + applies only to the character right before it. One or more digits needs {digit}+. The word digit repeated would need parentheses, as (digit)+. Flex accepts the pattern without complaint, which is why the mistake is easy to miss.",
+      "difficulty": "medium",
+      "tags": ["regex-syntax", "definitions"],
+      "exams": ["university"]
+    },
+    {
+      "id": "explain-yacc-connection",
+      "type": "short",
+      "prompt": "Describe how a scanner generated by Lex and a parser generated by Yacc work together. Mention yyparse, yylex, the token codes and yylval.",
+      "hint": "Follow one token: who asks for it, who finds it, and how the parser learns its kind and its value.",
+      "solution": "yyparse calls yylex each time it needs a token. yylex scans until an action returns a token code, and those codes come from the header Yacc generates, y.tab.h. If the token has a value, the action stores it in yylval before returning, and the parser reads it from there. At the end of the input, yylex returns 0, which tells the parser the input is finished.",
+      "explanation": "A good answer separates the two channels: the return value says what kind of token it is, and yylval says which one. It should also make clear that the parser is in charge and the scanner runs on demand, as described in the first lesson of this module.",
+      "difficulty": "easy",
+      "tags": ["yacc", "yylex", "yylval"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What are the three sections of a Lex file, and what separates them?",
+      "back": "Declarations, rules and user code, separated by lines containing only %%.",
+      "tags": ["file-structure"]
+    },
+    {
+      "front": "What are yytext, yyleng and yylval?",
+      "back": "yytext is the text of the current lexeme, and yyleng is its length. yylval is a global variable that passes the token's attribute value to the parser.",
+      "tags": ["yytext", "yylval"]
+    },
+    {
+      "front": "What does yywrap's return value mean?",
+      "back": "1 means there is no more input, so yylex returns 0. 0 means you have set up more input, so scanning continues.",
+      "tags": ["yywrap"]
+    },
+    {
+      "front": "How does Lex choose between rules that match?",
+      "back": "It takes the longest match. If several rules match that longest text, it takes the one listed first.",
+      "tags": ["longest-match", "rule-priority"]
+    },
+    {
+      "front": "What is the difference between %s and %x?",
+      "back": "Both declare start conditions, entered with BEGIN. With %s (inclusive), rules with no prefix stay active. With %x (exclusive), only rules marked with that condition are active.",
+      "tags": ["start-conditions"]
+    },
+    {
+      "front": "What happens to a character that no rule matches?",
+      "back": "Flex's default rule copies it to the output and carries on. Add a catch-all rule if you want to report it as an error.",
+      "tags": ["default-rule"]
+    }
+  ]
+}

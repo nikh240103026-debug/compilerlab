@@ -12,6 +12,19 @@ export const THEMES = ['system', 'light', 'dark'] as const;
 export const EDITOR_KEYMAPS = ['default', 'vim', 'emacs'] as const;
 export const TOOL_IDS = ['flex', 'bison', 'gcc', 'gpp', 'make'] as const;
 
+export const VISUALIZER_IDS = [
+  'regex-to-nfa',
+  'subset-construction',
+  'dfa-minimization',
+  'followpos',
+  'automaton-run',
+  'automata-builder',
+  'token-stream',
+  'input-buffer',
+] as const;
+
+export type VisualizerId = (typeof VISUALIZER_IDS)[number];
+
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   fontSize: 16,

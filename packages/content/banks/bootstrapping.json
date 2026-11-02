@@ -1,0 +1,254 @@
+{
+  "summary": [
+    "Every compiler has a source, a target and an implementation language, and a T-diagram shows them as the left arm, the right arm and the stem.",
+    "When a compiler is compiled by another compiler, its arms stay the same and only its stem changes, to the target language of the compiler doing the work.",
+    "A self-hosting compiler is written in the language it compiles, and it gets started through an earlier compiler in another language, a compiler for a subset, or an interpreter.",
+    "A cross-compiler runs on one machine and produces code for a different one, which makes it the tool for bringing a language to a new machine.",
+    "To port a self-hosting compiler, write a new back end, compile it with the existing compiler to get a cross-compiler, then compile it again with the cross-compiler to get a native compiler for the new machine."
+  ],
+  "practice": [
+    {
+      "id": "compose-tdiagram",
+      "type": "short",
+      "prompt": "You have a running compiler C→M in M.\n\n(a) You compile P→M in C with it. What comes out, and is it native or a cross-compiler?\n(b) You compile P→N in C with it instead. What comes out, and is it native or a cross-compiler?",
+      "hint": "Arms stay, and only the stem changes. Then compare where the result runs with what it produces.",
+      "solution": "(a) P→M in M. It runs on M and produces M code, so it is native.\n(b) P→N in M. It runs on M and produces N code, so it is a cross-compiler.",
+      "explanation": "The running compiler translates from C to M, so the stem C becomes M in both cases. The right arm is not affected, because translating a program does not change what it does. A common slip is to change the right arm to M in part (b), but N is what that program was written to produce.",
+      "difficulty": "easy",
+      "tags": ["t-diagrams", "cross-compilers"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "port-to-riscv",
+      "type": "short",
+      "prompt": "You have C→x86 in C and a running C→x86 in x86. You want a native C compiler on a RISC-V machine that has no compiler. List the steps and give the result of each in one-line notation.",
+      "hint": "You will have to compile the same source file twice, with two different compilers.",
+      "solution": "1. Write a RISC-V back end, giving the source C→RISC-V in C.\n2. Compile it with C→x86 in x86. Result: C→RISC-V in x86, a cross-compiler.\n3. Compile the same source with that cross-compiler. Result: C→RISC-V in RISC-V.\n4. Copy the result to the RISC-V machine, where it runs as a native compiler.",
+      "explanation": "Step 2 gives you something that can produce RISC-V code, but it runs only on x86. Stopping there is the usual mistake. Step 3 uses it to produce a compiler that is itself made of RISC-V code. The first compile changes the stem from C to x86, and the second changes it from C to RISC-V.",
+      "difficulty": "medium",
+      "tags": ["porting", "cross-compilers"],
+      "exams": ["university"]
+    },
+    {
+      "id": "spot-the-cross",
+      "type": "mcq",
+      "prompt": "Which of these is a cross-compiler?",
+      "options": ["C→ARM in ARM", "C→ARM in x86", "C→x86 in C", "Pascal→C in x86"],
+      "answer": 1,
+      "hint": "Compare where it runs with the machine its output runs on.",
+      "solution": "C→ARM in x86",
+      "explanation": "It runs on x86 and produces ARM code, so the host and target differ. C→ARM in ARM is native. C→x86 in C is source code, which cannot run until compiled. Pascal→C in x86 produces another high-level language rather than code for a different machine, so it is a source-to-source translator.",
+      "difficulty": "easy",
+      "tags": ["cross-compilers", "t-diagrams"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "compile-twice",
+      "type": "short",
+      "prompt": "You add a better optimizer to your compiler's source, and build it with your old compiler to get C1. Then you build the same source with C1 to get C2. Compare C1 and C2: what code does each generate, and how fast does each run? Why bother with C2?",
+      "hint": "Separate two questions: what decides the code a compiler generates, and what decides the speed of the compiler itself?",
+      "solution": "Both generate the same good code, because they were built from the same source, which contains the new optimizer.\n\nC1 itself runs slowly, because the old compiler generated its machine code. C2 runs faster, because C1, with the new optimizer, generated its machine code.\n\nC2 is worth building because you get the good output and also a fast compiler.",
+      "explanation": "Behavior comes from the source, while speed comes from the compiler that built it. It is tempting to think C1 is fast because it contains the optimizer, but the optimizer was only source code when C1 was compiled, so it had no effect on C1's own machine code.",
+      "difficulty": "hard",
+      "tags": ["self-hosting", "optimization"],
+      "exams": ["university"]
+    },
+    {
+      "id": "interpreter-route",
+      "type": "mcq",
+      "prompt": "You have an interpreter for L on machine M. You write the compiler L→M in L, and run it inside the interpreter, giving it its own source code as input. What comes out?",
+      "options": [
+        "L→M in M",
+        "L→M in L",
+        "M→L in M",
+        "Nothing useful, since a compiler must be compiled before it can run"
+      ],
+      "answer": 0,
+      "hint": "The compiler is a program running on some input. Which input, and what does this program write?",
+      "solution": "L→M in M",
+      "explanation": "The interpreter lets the compiler run even though it is not yet compiled, which rules out the last option. Its input is its own L source, and it writes that same program in M code, so the stem becomes M. L→M in L is the input, not the output, and M→L in M has the arms reversed, which compiling never does.",
+      "difficulty": "medium",
+      "tags": ["bootstrapping", "interpreters"],
+      "exams": ["GATE", "university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "tdiagram-parts",
+      "type": "mcq",
+      "prompt": "Which three things does a T-diagram show about a compiler?",
+      "options": [
+        "Its source language, target language and implementation language",
+        "Its lexer, parser and code generator",
+        "The machine it is built on, the machine it runs on, and the machine it targets",
+        "Its front end, optimizer and back end"
+      ],
+      "answer": 0,
+      "hint": "Translation goes across the top of the T. What does the stem represent?",
+      "solution": "Its source language, target language and implementation language.",
+      "explanation": "The left arm is the source, the right arm is the target, and the stem is the implementation language. The build, host and target machines in the third option are a real idea from GCC's build system, but a T-diagram records languages. The other options list parts of a compiler, and a T-diagram treats a compiler as one unit.",
+      "difficulty": "easy",
+      "tags": ["t-diagrams"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "identify-cross",
+      "type": "mcq",
+      "prompt": "A compiler runs on an x86 laptop and produces machine code for an ARM phone. What is it?",
+      "options": [
+        "A native compiler",
+        "A self-hosting compiler",
+        "A cross-compiler",
+        "A source-to-source translator"
+      ],
+      "answer": 2,
+      "hint": "Compare the machine it runs on with the machine its output runs on.",
+      "solution": "A cross-compiler.",
+      "explanation": "Its host and target differ, which is what defines a cross-compiler. A native compiler would produce x86 code. Self-hosting is about the language a compiler is written in, which this question does not mention. A source-to-source translator produces another high-level language, not machine code.",
+      "difficulty": "easy",
+      "tags": ["cross-compilers"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "compose-result",
+      "type": "mcq",
+      "prompt": "The compiler L→N in S is compiled by S→M in M. What comes out?",
+      "options": ["L→N in M", "L→M in M", "S→N in M", "L→N in S"],
+      "answer": 0,
+      "hint": "Which parts of the compiler being compiled can a translation change?",
+      "solution": "L→N in M",
+      "explanation": "Only the stem changes, from S to M, because that is what S→M in M translates. L→M in M wrongly changes the right arm: N is what this program was written to produce. S→N in M wrongly changes the left arm. L→N in S is the input, unchanged.",
+      "difficulty": "medium",
+      "tags": ["t-diagrams"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "self-hosting-meaning",
+      "type": "mcq",
+      "prompt": "What makes a compiler self-hosting?",
+      "options": [
+        "It generates code for the machine it runs on",
+        "It is written in the language it compiles",
+        "No other compiler was ever needed to create it",
+        "It includes its own assembler and linker"
+      ],
+      "answer": 1,
+      "hint": "In a T-diagram, which two positions hold the same language?",
+      "solution": "It is written in the language it compiles.",
+      "explanation": "Its stem matches its left arm. The first option defines a native compiler, a different idea, which is why the two are often confused. The third is false: a self-hosting compiler always needs something else to get started. Whether it includes an assembler has nothing to do with it.",
+      "difficulty": "easy",
+      "tags": ["self-hosting"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "why-subset",
+      "type": "mcq",
+      "prompt": "When bootstrapping a language L, why might you first write a compiler for only a subset of L?",
+      "options": [
+        "The subset compiler is small enough to write in a low-level language, and the full compiler can then be written in the subset",
+        "Programs written in L will never need the rest of the language",
+        "A subset compiler does not need to generate code for any machine",
+        "Compilers can only ever be written in a subset of their own language"
+      ],
+      "answer": 0,
+      "hint": "Think about which part of the job is hard to do in assembly language, and what the small compiler makes possible.",
+      "solution": "The subset compiler is small enough to write in a low-level language, and the full compiler can then be written in the subset.",
+      "explanation": "The subset is a stepping stone to L→M in M, not the final language, so the second option misses the point. The subset compiler must still generate real machine code, or nothing could run. The last option is false, since a self-hosting compiler can use all of its language.",
+      "difficulty": "medium",
+      "tags": ["bootstrapping"],
+      "exams": ["university"]
+    },
+    {
+      "id": "first-compile-on-port",
+      "type": "mcq",
+      "prompt": "You have a running L→A in A on machine A, and you have just written the source L→B in L. What do you get by compiling that source with the running compiler?",
+      "options": ["L→A in B", "L→B in A", "L→B in B", "L→A in A"],
+      "answer": 1,
+      "hint": "Apply the rule: which position changes, and what does it change to?",
+      "solution": "L→B in A",
+      "explanation": "The stem L becomes A, and the arms stay L and B. The result is a cross-compiler. L→B in B is what you want in the end, but it takes one more compile: choosing it is the classic mistake. L→A in B and L→A in A both wrongly change the right arm back to A.",
+      "difficulty": "medium",
+      "tags": ["porting", "t-diagrams"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "poor-compiler-output",
+      "type": "mcq",
+      "prompt": "You add a better optimizer to a compiler's source and compile that source with the old compiler. What is true of the result?",
+      "options": [
+        "It generates better code and it runs faster, since the new optimizer was used on it",
+        "It generates better code, but the new optimizer did not speed up the compiler itself",
+        "It generates the same poor code as the old compiler, since the old compiler built it",
+        "It generates poor code, but the compiler itself runs faster"
+      ],
+      "answer": 1,
+      "hint": "When this build happened, which compiler's optimizer was actually running?",
+      "solution": "It generates better code, but the new optimizer did not speed up the compiler itself.",
+      "explanation": "What the result generates comes from its source, which contains the new optimizer. Its own machine code came from the old compiler, and the new optimizer was only input during this build, so it did not run. The first option assumes it did run. The third and fourth wrongly let the old compiler decide what the new one generates.",
+      "difficulty": "hard",
+      "tags": ["self-hosting", "optimization"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "compare-stages",
+      "type": "mcq",
+      "prompt": "A three-stage GCC bootstrap compares stage 2 with stage 3. Why not compare stage 1 with stage 2?",
+      "options": [
+        "Stage 1 is written in a different language",
+        "Stage 1 was built by a different compiler, so its file can differ even when everything is correct",
+        "Stages 2 and 3 are the only stages that generate machine code",
+        "Stage 1 is deleted before the comparison happens"
+      ],
+      "answer": 1,
+      "hint": "All three stages come from the same source. So what is different about stage 1?",
+      "solution": "Stage 1 was built by a different compiler, so its file can differ even when everything is correct.",
+      "explanation": "The system's existing compiler built stage 1, so stage 1 has different machine code from stage 2. Stages 1 and 2 share a source, so they should behave the same, which makes their outputs, stages 2 and 3, comparable. Stage 1 is not in a different language, all stages generate machine code, and the reason has nothing to do with deleting files.",
+      "difficulty": "hard",
+      "tags": ["self-hosting"],
+      "exams": ["university"]
+    },
+    {
+      "id": "explain-bootstrapping",
+      "type": "short",
+      "prompt": "Explain how a compiler for a new language L can end up written in L, even though no compiler for L exists at the start. Describe one route, with the result of each step.",
+      "hint": "Something other than L has to do the first compile. Pick one of the three routes in the lesson and apply the T-diagram rule at each step.",
+      "solution": "Using the subset route on machine M:\n1. Write a compiler for a small subset S of L in assembly language: S→M in M.\n2. Write a compiler for all of L using only S: L→M in S.\n3. Compile step 2 with step 1 to get L→M in M, which runs on M.\n4. Rewrite the compiler using all of L, giving L→M in L, and compile it with step 3.\n\nFrom then on, each new version can be compiled by the previous one.",
+      "explanation": "A good answer shows that the circle is broken by something outside L. Writing a first version in another language, or running the compiler in an interpreter for L, are equally good routes. A weak answer says the compiler 'compiles itself' without explaining how the first runnable copy appears.",
+      "difficulty": "medium",
+      "tags": ["bootstrapping", "self-hosting"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What do the three positions of a T-diagram mean?",
+      "back": "Left arm: source language. Right arm: target language. Stem: the language the compiler is written in.",
+      "tags": ["t-diagrams"]
+    },
+    {
+      "front": "What comes out when S→T in I is compiled by I→X in M?",
+      "back": "S→T in X. The arms stay the same, and only the stem changes.",
+      "tags": ["t-diagrams"]
+    },
+    {
+      "front": "What does self-hosting mean?",
+      "back": "The compiler is written in the language it compiles, as in L→T in L.",
+      "tags": ["self-hosting"]
+    },
+    {
+      "front": "What is a cross-compiler?",
+      "back": "A compiler that runs on one machine and produces code for a different machine.",
+      "tags": ["cross-compilers"]
+    },
+    {
+      "front": "How do you port L→A in L to a new machine B?",
+      "back": "Write a back end for B, giving L→B in L. Compile it with L→A in A to get L→B in A, a cross-compiler. Compile it again with that to get L→B in B.",
+      "tags": ["porting"]
+    },
+    {
+      "front": "What decides the code a compiler generates, and what decides how fast the compiler runs?",
+      "back": "Its source code decides the code it generates. The compiler that compiled it decides how fast it runs.",
+      "tags": ["self-hosting"]
+    }
+  ]
+}

@@ -25,6 +25,10 @@ export default tseslint.config(
     plugins: { ...jsxA11y.flatConfigs.recommended.plugins, 'react-hooks': reactHooks },
     rules: {
       ...jsxA11y.flatConfigs.recommended.rules,
+      'jsx-a11y/label-has-associated-control': [
+        'error',
+        { controlComponents: ['Input', 'NativeSelect'], depth: 3 },
+      ],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
     },

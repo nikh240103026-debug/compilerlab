@@ -128,6 +128,109 @@
 }
 
 @layer components {
+  /* Lesson text comes from MDX as plain elements, so it is styled by position, not class. */
+  .lesson-prose {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+  }
+  .lesson-prose h2 {
+    margin-top: 2rem;
+    margin-bottom: 0.625rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  .lesson-prose h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+  .lesson-prose p,
+  .callout-body p {
+    margin-block: 0.625rem;
+  }
+  .callout-body p:first-child {
+    margin-top: 0;
+  }
+  .callout-body p:last-child {
+    margin-bottom: 0;
+  }
+  .lesson-prose ul,
+  .lesson-prose ol {
+    margin-block: 0.625rem;
+    padding-left: 1.25rem;
+  }
+  .lesson-prose ul {
+    list-style: disc;
+  }
+  .lesson-prose ol {
+    list-style: decimal;
+  }
+  .lesson-prose li {
+    margin-block: 0.25rem;
+  }
+  .lesson-prose a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .lesson-prose code {
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+    padding: 0.0625rem 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
+  .lesson-prose pre {
+    margin-block: 0.875rem;
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
+    padding: 0.75rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .lesson-prose pre code {
+    background: none;
+    padding: 0;
+    font-size: inherit;
+  }
+  .lesson-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .lesson-prose th,
+  .lesson-prose td {
+    border: 1px solid var(--line);
+    padding: 0.375rem 0.625rem;
+    text-align: left;
+  }
+  .lesson-prose th {
+    background: var(--surface-2);
+    font-weight: 600;
+  }
+  .lesson-prose .katex-display {
+    margin-block: 0.875rem;
+    overflow-x: auto;
+  }
+
+  /* React Flow's own attribution link is too low in contrast for WCAG AA. */
+  .react-flow__attribution {
+    background: var(--surface) !important;
+  }
+  .react-flow__attribution a {
+    color: var(--ink-muted) !important;
+  }
+  .react-flow__controls button {
+    background: var(--surface-2);
+    border-color: var(--line);
+    color: var(--ink);
+  }
+  .react-flow__controls button svg {
+    fill: currentColor;
+  }
+
   .eyebrow {
     font-family: var(--font-mono);
     font-size: 0.6875rem;

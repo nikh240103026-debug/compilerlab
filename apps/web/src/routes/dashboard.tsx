@@ -1,4 +1,5 @@
-import type { CourseModule } from '@compilerlab/shared';
+import type { CourseModule, LessonSummary } from '@compilerlab/shared';
+import { isTopicComplete } from '@compilerlab/shared/progress';
 import { ArrowRight, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router';
 import { EmptyState } from '@/components/empty-state';
@@ -11,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLessons, useProgress } from '@/hooks/use-lessons';
 import { useModules, useSystemStatus } from '@/hooks/use-system';
 import { describeError } from '@/lib/api';
 
@@ -46,6 +48,44 @@ function ModuleRow({ module }: { module: CourseModule }) {
         {module.optional ? <Badge>Optional</Badge> : null}
       </Link>
     </li>
+  );
+}
+
+function ProgressSummary() {
+  const { data: lessons = [] } = useLessons();
+  const { data: progress = [] } = useProgress();
+  const mine = (id: string) => progress.find((item) => item.topicId === id);
+  const isDone = (lesson: LessonSummary) =>
+    isTopicComplete(mine(lesson.id), lesson.visualizers.length > 0);
+  const complete = lessons.filter(isDone);
+  const nextUp =
+    lessons.find((lesson) => mine(lesson.id) && !isDone(lesson)) ??
+    lessons.find((lesson) => !mine(lesson.id));
+
+  if (progress.length === 0) {
+    return (
+      <EmptyState icon={<BarChart3 aria-hidden="true" />} title="Nothing to show yet">
+        Your progress appears here once you start working through lessons and quizzes.
+      </EmptyState>
+    );
+  }
+  return (
+    <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+      <p className="text-sm">
+        <span className="font-semibold">
+          {complete.length} of {lessons.length}
+        </span>{' '}
+        topics complete
+      </p>
+      {nextUp ? (
+        <Button asChild size="sm" variant="primary">
+          <Link to={`/learn/${nextUp.module}/${nextUp.id}`}>
+            Continue with {nextUp.title}
+            <ArrowRight aria-hidden="true" />
+          </Link>
+        </Button>
+      ) : null}
+    </Card>
   );
 }
 
@@ -106,10 +146,7 @@ export function Component() {
           </section>
           <section>
             <SectionTitle>Your progress</SectionTitle>
-            <EmptyState icon={<BarChart3 aria-hidden="true" />} title="Nothing to show yet">
-              Mastery per phase, streaks and time spent will appear here once you start working
-              through lessons and quizzes.
-            </EmptyState>
+            <ProgressSummary />
           </section>
         </div>
 

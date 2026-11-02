@@ -1,0 +1,252 @@
+{
+  "summary": [
+    "A compiler has an analysis part, or front end, which builds an intermediate representation and a symbol table, and a synthesis part, or back end, which builds the target program from them.",
+    "The phases in order are lexical analysis, syntax analysis, semantic analysis, intermediate code generation, machine-independent optimization, code generation, and machine-dependent optimization. Optimization is optional.",
+    "Each phase turns one form of the program into another: characters into tokens, tokens into a syntax tree, the tree into intermediate code, and intermediate code into target code.",
+    "The symbol table holds a record for each name and is available to every phase, and any phase can detect errors, which the compiler should report and recover from.",
+    "A phase is a logical step, while a pass is one trip through a file, and several phases can be grouped into one pass."
+  ],
+  "practice": [
+    {
+      "id": "trace-all-integers",
+      "type": "short",
+      "prompt": "All of x, y and z are integers. Write the token stream and the unoptimized three-address code for this statement, numbering symbol-table entries in order of appearance.\n\nx = y + z * 2",
+      "hint": "Follow the running example, but check whether the operand types of * and + match before you add any conversion.",
+      "solution": "Tokens:\n⟨id, 1⟩ ⟨=⟩ ⟨id, 2⟩ ⟨+⟩ ⟨id, 3⟩ ⟨*⟩ ⟨2⟩\n\nThree-address code:\nt1 = id3 * 2\nt2 = id2 + t1\nid1 = t2",
+      "explanation": "Since * binds tighter than +, the multiplication comes first. Every operand is an integer, so no coercion is needed and there is no inttofloat. Copying that instruction from the running example out of habit is the common slip. An optimizer could later remove t2.",
+      "difficulty": "medium",
+      "tags": ["trace", "three-address-code"],
+      "exams": ["university"]
+    },
+    {
+      "id": "coercion-moves",
+      "type": "short",
+      "prompt": "In position = initial + rate * 60, suppose position and initial are floating-point but rate is an integer. Write the unoptimized three-address code. Where does the conversion go now?",
+      "hint": "Work out the type of rate * 60 first. Then ask which operator sees mismatched types.",
+      "solution": "t1 = id3 * 60\nt2 = inttofloat(t1)\nt3 = id2 + t2\nid1 = t3\n\nrate * 60 is now integer times integer, so it needs no conversion. The mismatch moves to +, which adds a float to an integer, so the result of the multiplication gets converted.",
+      "explanation": "A coercion goes where an operator sees mismatched operand types, not always on the literal 60. Writing inttofloat(60) here would be wrong, because it would turn the multiplication into a floating-point one when the program asked for an integer one.",
+      "difficulty": "hard",
+      "tags": ["semantic-analysis", "coercion", "three-address-code"],
+      "exams": ["university"]
+    },
+    {
+      "id": "which-phase-finds-it",
+      "type": "short",
+      "prompt": "Which phase finds each problem in a C program, if any?\n\n(a) A stray @ character\n(b) x = (1 + 2;\n(c) int a[10]; a[1.5] = 0;\n(d) if (x = 0) where the programmer meant ==",
+      "hint": "Ask what you would need to know to spot each one: only the characters, only the arrangement of tokens, the types, or the programmer's intention.",
+      "solution": "(a) Lexical analysis: no token can begin with @.\n(b) Syntax analysis: every token is valid, but their arrangement is not.\n(c) Semantic analysis: the structure is fine, but an array index must be an integer.\n(d) No phase treats it as an error: it is valid C, so this is a logical error. A compiler may give a warning.",
+      "explanation": "Part (c) is the trap. It looks like the array is written wrongly, but a[1.5] matches the grammar, and only a type check can reject it. Part (d) shows that compilers check that a program is valid, not that it does what you meant.",
+      "difficulty": "medium",
+      "tags": ["errors", "phases"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "front-ends-back-ends",
+      "type": "mcq",
+      "prompt": "A company wants compilers for 5 source languages on 3 target machines, built around one shared intermediate representation. How many front ends and back ends must it write in total?",
+      "options": ["3", "5", "8", "15"],
+      "answer": 2,
+      "hint": "Which part depends on the language, and which on the machine?",
+      "solution": "8: five front ends and three back ends.",
+      "explanation": "Each language needs one front end and each machine needs one back end, so the counts add up: 5 + 3 = 8. The answer 15 is the number of complete compilers you would need without a shared intermediate representation, which is the cost this design avoids. The answers 3 and 5 count only one side.",
+      "difficulty": "easy",
+      "tags": ["front-end", "back-end", "intermediate-code"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "explain-optimization-step",
+      "type": "short",
+      "prompt": "The optimizer turns the first sequence below into the second. Explain the two changes and why each is safe.\n\nt1 = inttofloat(60)\nt2 = id3 * t1\nt3 = id2 + t2\nid1 = t3\n\nt1 = id3 * 60.0\nid1 = id2 + t1",
+      "hint": "Which of these values is already known when compiling? Which temporary only passes a value along?",
+      "solution": "1. inttofloat(60) has a constant argument, so the conversion can be done at compile time, and 60.0 can be used directly. The run-time conversion is not needed.\n2. t3 is used only once, to pass its value to id1, so the addition can store straight into id1 and t3 can go.\n\nBoth keep the program's meaning: id1 gets the same value as before, using fewer instructions.",
+      "explanation": "Optimization must preserve meaning. The first change works because the value is known at compile time, and it would not work on a variable. The second works because nothing else reads t3. The remaining temporary is simply renumbered, so t2 in the old code is t1 in the new code.",
+      "difficulty": "medium",
+      "tags": ["optimization"],
+      "exams": ["university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "phase-order",
+      "type": "mcq",
+      "prompt": "Which is the correct order of these phases?",
+      "options": [
+        "Syntax analysis, lexical analysis, semantic analysis, intermediate code generation",
+        "Lexical analysis, semantic analysis, syntax analysis, intermediate code generation",
+        "Lexical analysis, syntax analysis, semantic analysis, intermediate code generation",
+        "Lexical analysis, syntax analysis, intermediate code generation, semantic analysis"
+      ],
+      "answer": 2,
+      "hint": "Each phase needs the output of the one before it. What does each one take in?",
+      "solution": "Lexical analysis, syntax analysis, semantic analysis, intermediate code generation.",
+      "explanation": "The parser needs tokens, so lexing must come before parsing. Semantic analysis works on the syntax tree, so it cannot come before parsing. Intermediate code is generated from the checked tree, so semantic analysis comes before it, not after.",
+      "difficulty": "easy",
+      "tags": ["phases"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "not-front-end",
+      "type": "mcq",
+      "prompt": "Following the Dragon Book's grouping, which of these is NOT a front-end phase?",
+      "options": [
+        "Lexical analysis",
+        "Semantic analysis",
+        "Intermediate code generation",
+        "Code generation"
+      ],
+      "answer": 3,
+      "hint": "Which one depends directly on the target machine?",
+      "solution": "Code generation.",
+      "explanation": "Code generation chooses instructions and registers for a target machine, which makes it back-end work. Intermediate code generation is the tempting wrong answer, because it produces code, but what it produces is machine-independent, and it comes before the split. The first two analysis phases are clearly front end.",
+      "difficulty": "easy",
+      "tags": ["front-end", "back-end"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "symbol-table-users",
+      "type": "mcq",
+      "prompt": "Which phases can use the symbol table?",
+      "options": [
+        "Only lexical analysis",
+        "Only lexical and syntax analysis",
+        "Only the analysis phases",
+        "All phases"
+      ],
+      "answer": 3,
+      "hint": "Think about what the code generator needs to know about a variable before it can use it.",
+      "solution": "All phases.",
+      "explanation": "The early phases add to it, and semantic analysis reads types from it. The back end needs it too, for example for a variable's type and storage, so limiting it to analysis is wrong. The lexer may be the first phase to touch it, but it is far from the only one.",
+      "difficulty": "easy",
+      "tags": ["symbol-table"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "type-checking-phase",
+      "type": "mcq",
+      "prompt": "In which phase does type checking normally take place?",
+      "options": ["Lexical analysis", "Syntax analysis", "Semantic analysis", "Code generation"],
+      "answer": 2,
+      "hint": "A statement can have correct structure and still make no sense. Which phase catches that?",
+      "solution": "Semantic analysis.",
+      "explanation": "The lexer sees only separate tokens. The parser checks structure, and a type error can have perfectly good structure, so x = \"abc\" * 2 parses. Waiting until code generation would be too late, because the coercions the checker inserts are needed to generate correct code.",
+      "difficulty": "easy",
+      "tags": ["semantic-analysis"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "why-inttofloat",
+      "type": "mcq",
+      "prompt": "In position = initial + rate * 60, all three names are floating-point. Why does the output of semantic analysis contain an inttofloat node?",
+      "options": [
+        "The lexer can only read whole numbers, so it cannot produce the value 60.0",
+        "The operator * is applied to a float and an integer, so the integer is converted",
+        "The parser needs both operands of every operator to have the same type",
+        "The target machine has no registers that can hold an integer"
+      ],
+      "answer": 1,
+      "hint": "Which phase cares about the types of an operator's operands, and what did it find here?",
+      "solution": "The operator * is applied to a float and an integer, so the integer is converted.",
+      "explanation": "The type checker found a mismatch and added a coercion. The lexer can recognize floating-point literals in general, and here it read 60 because the source says 60. The parser works with structure and does not know types. The target machine is not considered until later phases, so it cannot be the reason.",
+      "difficulty": "medium",
+      "tags": ["semantic-analysis", "coercion"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "three-address-property",
+      "type": "mcq",
+      "prompt": "Which statement is true of three-address code?",
+      "options": [
+        "Every instruction must have exactly three operands",
+        "Each assignment instruction has at most one operator on its right side",
+        "Its operands must be registers of the target machine",
+        "Temporary names are not allowed"
+      ],
+      "answer": 1,
+      "hint": "Look at id1 = t3 in the running example, and count operands and operators.",
+      "solution": "Each assignment instruction has at most one operator on its right side.",
+      "explanation": "That limit is what fixes the order of operations. The name misleads people into the first option, but id1 = t3 has only two operands. Three-address code is machine-independent, so it does not use real registers, and it depends on temporary names to hold intermediate results.",
+      "difficulty": "medium",
+      "tags": ["three-address-code"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "why-intermediate-code",
+      "type": "mcq",
+      "prompt": "What is a main reason for a compiler to use a machine-independent intermediate representation?",
+      "options": [
+        "It removes the need for lexical analysis",
+        "It guarantees that the target code is the best possible",
+        "It lets the same optimizer and back ends be reused with different front ends",
+        "It lets the parser work without a grammar"
+      ],
+      "answer": 2,
+      "hint": "Think about how many parts you must write to support several languages on several machines.",
+      "solution": "It lets the same optimizer and back ends be reused with different front ends.",
+      "explanation": "A shared intermediate form separates language-specific work from machine-specific work. It does nothing to reduce what the analysis phases must do, so lexing and the grammar are still needed. No optimizer can guarantee the best possible code, whatever representation it uses.",
+      "difficulty": "medium",
+      "tags": ["intermediate-code"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "phase-versus-pass",
+      "type": "mcq",
+      "prompt": "Which statement about phases and passes is correct?",
+      "options": [
+        "A phase is a logical step, and several phases can be grouped into one pass",
+        "A pass is a logical step, and a phase is one trip through a file",
+        "Each phase must be implemented as its own pass",
+        "A compiler must have exactly one pass"
+      ],
+      "answer": 0,
+      "hint": "Which term describes the design, and which describes how it is implemented?",
+      "solution": "A phase is a logical step, and several phases can be grouped into one pass.",
+      "explanation": "The second option swaps the two terms. The third is false because front-end phases are often grouped, with the parser calling the lexer on demand. The last is false because compilers can have one or several passes.",
+      "difficulty": "easy",
+      "tags": ["passes"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "explain-analysis-synthesis",
+      "type": "short",
+      "prompt": "Explain the analysis and synthesis parts of a compiler. Say what each part does, and what is passed from one to the other.",
+      "hint": "Name the two things the synthesis part receives.",
+      "solution": "The analysis part, or front end, breaks the source program into pieces, gives them a grammatical structure, checks for errors, builds an intermediate representation, and collects information about names in the symbol table.\n\nThe synthesis part, or back end, builds the target program.\n\nThe intermediate representation and the symbol table are passed from analysis to synthesis.",
+      "explanation": "A good answer names both things passed across, since many answers forget the symbol table. It helps to add that the front end depends mainly on the source language and the back end mainly on the target machine, which is why they can be mixed and matched.",
+      "difficulty": "easy",
+      "tags": ["front-end", "back-end"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Name the seven phases in the Dragon Book's diagram, in order.",
+      "back": "Lexical analysis, syntax analysis, semantic analysis, intermediate code generation, machine-independent code optimization, code generation, machine-dependent code optimization.",
+      "tags": ["phases"]
+    },
+    {
+      "front": "What passes from the analysis part to the synthesis part?",
+      "back": "The intermediate representation and the symbol table.",
+      "tags": ["front-end", "back-end"]
+    },
+    {
+      "front": "What are the tokens for position = initial + rate * 60?",
+      "back": "⟨id, 1⟩ ⟨=⟩ ⟨id, 2⟩ ⟨+⟩ ⟨id, 3⟩ ⟨*⟩ ⟨60⟩",
+      "tags": ["running-example"]
+    },
+    {
+      "front": "What is a coercion?",
+      "back": "A type conversion the compiler inserts automatically because the language allows it, such as inttofloat applied to an integer operand of a floating-point multiplication.",
+      "tags": ["semantic-analysis"]
+    },
+    {
+      "front": "What does the symbol table hold?",
+      "back": "One record for each name, with fields such as its type, storage and scope. For a procedure, also the number and types of its arguments, how they are passed, and the return type.",
+      "tags": ["symbol-table"]
+    },
+    {
+      "front": "What is the difference between a phase and a pass?",
+      "back": "A phase is a logical step of the compiler. A pass is one read of an input file and write of an output file, and it can include several phases.",
+      "tags": ["passes"]
+    }
+  ]
+}

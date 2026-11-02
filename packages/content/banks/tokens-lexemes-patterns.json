@@ -1,0 +1,266 @@
+{
+  "summary": [
+    "A pattern describes the form a token's lexemes may take, a lexeme is the actual text in the program that matches it, and a token is the pair of a token name and an optional attribute value that the lexer gives the parser.",
+    "The token name drives parsing decisions, and the attribute value tells later phases which lexeme was found. An identifier usually carries a pointer to its symbol-table entry, while most punctuation needs no attribute.",
+    "Most tokens fall into five classes: keywords, operators, identifiers, constants and punctuation.",
+    "To count tokens, ignore whitespace and comments, take the longest possible lexeme at each point, and count every occurrence. A string literal is one token, whatever it contains."
+  ],
+  "practice": [
+    {
+      "id": "count-printf",
+      "type": "mcq",
+      "prompt": "How many tokens does a C lexer produce for this statement?\n\nprintf(\"i = %d, &i = %x\", i, &i);",
+      "options": ["8", "9", "10", "13"],
+      "answer": 2,
+      "hint": "List the lexemes one at a time. Decide first how much of the quoted text belongs to a single lexeme.",
+      "solution": "10 tokens: printf  (  \"i = %d, &i = %x\"  ,  i  ,  &  i  )  ;",
+      "explanation": "The whole string literal is one token, so nothing inside the quotes counts separately. You get 9 by reading &i as one token or by forgetting the semicolon, and 8 by doing both. Larger numbers such as 13 come from counting pieces inside the string.",
+      "difficulty": "medium",
+      "tags": ["counting", "string-literals"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "count-longest-match",
+      "type": "mcq",
+      "prompt": "How many tokens does a C lexer produce for this statement?\n\nx = a+++b;",
+      "options": [
+        "6",
+        "7",
+        "8",
+        "None, because the lexer reports an error: +++ is not an operator"
+      ],
+      "answer": 1,
+      "hint": "At each point, the lexer takes the longest lexeme that is valid, and it never looks at whether the result makes sense.",
+      "solution": "7 tokens: x  =  a  ++  +  b  ;",
+      "explanation": "At the first + the longest valid lexeme is ++, because +++ is not an operator. The third + then stands alone. You get 8 by splitting all three plus signs, and 6 by treating +++ as a single token. There is no lexical error, because each piece is a valid token.",
+      "difficulty": "medium",
+      "tags": ["counting", "longest-match"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "count-comment-string",
+      "type": "mcq",
+      "prompt": "How many tokens does a C lexer produce for this line?\n\ns = \"/* not a comment */\"; // done",
+      "options": ["3", "4", "5", "9"],
+      "answer": 1,
+      "hint": "The lexer starts a new lexeme at the opening quote. What does that mean for the characters until the closing quote?",
+      "solution": "4 tokens: s  =  \"/* not a comment */\"  ;",
+      "explanation": "Inside a string, /* and */ are ordinary characters, so the quoted text is one literal. After the semicolon, // begins a real comment, which produces no token. You get 3 by treating the quoted text as a comment, and 5 by counting the real comment as a token.",
+      "difficulty": "medium",
+      "tags": ["counting", "comments", "string-literals"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "count-for-loop",
+      "type": "mcq",
+      "prompt": "How many tokens does a C lexer produce for this statement?\n\nfor (i = 0; i < 10; i++) sum += a[i];",
+      "options": ["16", "18", "20", "22"],
+      "answer": 2,
+      "hint": "Go slowly and write the lexemes down. Watch the operators that use two characters, and the brackets.",
+      "solution": "20 tokens: for  (  i  =  0  ;  i  <  10  ;  i  ++  )  sum  +=  a  [  i  ]  ;",
+      "explanation": "++ and += are one token each, because the longest match keeps them together. Splitting both gives 22. You get 18 by leaving out the two brackets, and 16 by leaving out the parentheses as well, but all of these are tokens like any other punctuation.",
+      "difficulty": "medium",
+      "tags": ["counting"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "regex-comparison",
+      "type": "regex",
+      "prompt": "Write a regular expression for the token comparison, whose lexemes are exactly these six operators:\n\n<   >   <=   >=   ==   !=",
+      "reference": "<|>|<=|>=|==|!=",
+      "accepts": ["<", ">", "<=", ">=", "==", "!="],
+      "rejects": ["", "=", "!", "<>", "=<"],
+      "hint": "There are only finitely many lexemes here, so you can list them as alternatives.",
+      "solution": "<|>|<=|>=|==|!=",
+      "explanation": "Listing the lexemes as alternatives always works for a finite set. A shorter equivalent is <=?|>=?|==|!=. A single = must not match, because that is the assignment operator, and a ! alone is not a comparison either.",
+      "difficulty": "easy",
+      "tags": ["patterns", "regex"],
+      "exams": ["university"]
+    },
+    {
+      "id": "lexemes-and-classes",
+      "type": "short",
+      "prompt": "For this C statement:\n\nif (x1 <= 3.14) return 0;\n\n(a) List each lexeme with its token class.\n(b) Which of these tokens would normally carry an attribute value, and what would it hold?",
+      "hint": "Use the five classes: keywords, operators, identifiers, constants and punctuation. For part (b), ask which token names could stand for more than one lexeme.",
+      "solution": "(a) There are 9 tokens: if (keyword), ( (punctuation), x1 (identifier), <= (operator), 3.14 (constant), ) (punctuation), return (keyword), 0 (constant), ; (punctuation).\n(b) x1 carries a pointer to its symbol-table entry. 3.14 and 0 carry the value of the constant, or a pointer to its text. If <= is grouped under a token such as comparison, its attribute says which operator it was. The keywords and punctuation need no attribute.",
+      "explanation": "An attribute is needed when a token name can stand for more than one lexeme, because later phases must know which one was found. A common slip is to say every token needs an attribute: the token name for ( or ; already says everything.",
+      "difficulty": "easy",
+      "tags": ["token-classes", "attributes"],
+      "exams": ["university"]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "lexeme-definition",
+      "type": "mcq",
+      "prompt": "What is a lexeme?",
+      "options": [
+        "The abstract symbol the parser uses for a kind of lexical unit",
+        "A rule describing the form a group of strings can take",
+        "A sequence of characters in the source program that matches the pattern for a token",
+        "An entry in the symbol table"
+      ],
+      "answer": 2,
+      "hint": "Which of the three words refers to text you could point at in the program?",
+      "solution": "A sequence of characters in the source program that matches the pattern for a token.",
+      "explanation": "The first option describes a token name, and the second describes a pattern. The symbol table may store a lexeme, but an entry there is not what the word means.",
+      "difficulty": "easy",
+      "tags": ["definitions"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "name-the-parts",
+      "type": "mcq",
+      "prompt": "In the C line int count = 0; a lexer returns the token name id for count. What are count and id?",
+      "options": [
+        "count is a token name, and id is a lexeme",
+        "count is a lexeme, and id is a token name",
+        "count is a pattern, and id is an attribute value",
+        "Both are patterns"
+      ],
+      "answer": 1,
+      "hint": "One of them appears in the source text, and the other is what the parser's grammar mentions.",
+      "solution": "count is a lexeme, and id is a token name.",
+      "explanation": "count is the actual text in the program, so it is a lexeme. id never appears in the source, because it is the symbol the parser sees. The first option swaps the two. The attribute would be a pointer to count's symbol-table entry, not id, and the pattern is the rule that count matches.",
+      "difficulty": "easy",
+      "tags": ["definitions"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "one-lexeme-pattern",
+      "type": "mcq",
+      "prompt": "Which token's pattern matches exactly one lexeme?",
+      "options": ["id", "number", "the keyword else", "literal"],
+      "answer": 2,
+      "hint": "Look for the pattern that leaves no choice about which characters appear.",
+      "solution": "The keyword else.",
+      "explanation": "The pattern for a keyword is the keyword itself, so else is the only lexeme it matches. id, number and literal each have patterns that match unboundedly many strings, which is why they need attribute values to say which lexeme was found.",
+      "difficulty": "easy",
+      "tags": ["patterns"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "no-attribute",
+      "type": "mcq",
+      "prompt": "Which of these tokens usually needs no attribute value?",
+      "options": [
+        "id",
+        "number",
+        "a single comparison token that covers < > <= >= == !=",
+        "the semicolon token"
+      ],
+      "answer": 3,
+      "hint": "An attribute answers the question \"which lexeme was it?\". For which token does that question not arise?",
+      "solution": "The semicolon token.",
+      "explanation": "Only one lexeme matches the semicolon's pattern, so the token name says everything. id and number each stand for many lexemes. A grouped comparison token stands for six operators, so it needs an attribute to say which one, even though each lexeme is short.",
+      "difficulty": "easy",
+      "tags": ["attributes"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "count-if-statement",
+      "type": "mcq",
+      "prompt": "How many tokens does a C lexer produce for this statement?\n\nif (x >= 10) y++;",
+      "options": ["7", "8", "9", "11"],
+      "answer": 2,
+      "hint": "The parentheses and the semicolon are tokens. Now look closely at the operators.",
+      "solution": "9 tokens: if  (  x  >=  10  )  y  ++  ;",
+      "explanation": ">= and ++ are one token each under the longest match, and splitting both gives 11. You get 8 by forgetting the semicolon, and 7 by forgetting the parentheses.",
+      "difficulty": "easy",
+      "tags": ["counting"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "count-book-printf",
+      "type": "mcq",
+      "prompt": "How many tokens does a C lexer produce for this statement?\n\nprintf(\"Total = %d\\n\", score);",
+      "options": ["5", "6", "7", "10"],
+      "answer": 2,
+      "hint": "Decide what the lexer does with everything from the opening quote to the closing quote.",
+      "solution": "7 tokens: printf  (  \"Total = %d\\n\"  ,  score  )  ;",
+      "explanation": "The string literal, including the \\n written inside it, is one lexeme. You get 6 by forgetting the semicolon, and 5 by forgetting the parentheses. Numbers like 10 come from counting words or symbols inside the quotes.",
+      "difficulty": "easy",
+      "tags": ["counting", "string-literals"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "grouping-count",
+      "type": "mcq",
+      "prompt": "Compiler A returns one token, comparison, for all six comparison operators. Compiler B returns a separate token for each operator. How do their token counts compare for the same source file?",
+      "options": [
+        "A produces fewer tokens",
+        "B produces fewer tokens",
+        "They produce the same number of tokens",
+        "It depends on how many comparison operators the file contains"
+      ],
+      "answer": 2,
+      "hint": "Count what happens to one <= in each compiler.",
+      "solution": "They produce the same number of tokens.",
+      "explanation": "Each lexeme produces one token in both compilers. Grouping changes how many token names exist, not how many tokens appear in the stream. It is tempting to think fewer names means fewer tokens, but names are kinds, and the count is of occurrences.",
+      "difficulty": "medium",
+      "tags": ["counting", "token-classes"],
+      "exams": ["GATE"]
+    },
+    {
+      "id": "keyword-or-identifier",
+      "type": "mcq",
+      "prompt": "A lexer has a rule for the keyword if, listed first, and a rule for identifiers. The source contains the text ifx followed by a space, and elsewhere if followed by a space. What does it return for each?",
+      "options": [
+        "ifx is the keyword if followed by the identifier x, and if is a keyword",
+        "ifx is an identifier, and if is a keyword",
+        "Both are identifiers",
+        "Both are keywords"
+      ],
+      "answer": 1,
+      "hint": "Apply two rules in order: the longest match first, then the order of the rules for a tie.",
+      "solution": "ifx is an identifier, and if is a keyword.",
+      "explanation": "For ifx, the identifier rule matches three characters and the keyword rule only two, so the longest match picks the identifier. Stopping early at if is exactly what the longest match rule prevents. For if, both rules match two characters, so the tie goes to the earlier rule, which is the keyword.",
+      "difficulty": "medium",
+      "tags": ["longest-match", "keywords"],
+      "exams": ["GATE", "university"]
+    },
+    {
+      "id": "explain-three-terms",
+      "type": "short",
+      "prompt": "Explain the difference between a token, a pattern and a lexeme, using the C statement total = total + 1; as your example.",
+      "hint": "For each term, say what kind of thing it is, then point to an example of it in the statement.",
+      "solution": "A lexeme is the actual text in the program that matches a pattern. In this statement, total, =, +, 1 and ; are lexemes.\nA pattern describes the form a token's lexemes may take. The pattern for identifiers, a letter followed by letters and digits, is what total matches.\nA token is the pair the lexer gives the parser: a token name and an optional attribute value. For total, it is the name id with a pointer to total's symbol-table entry. The statement has 6 tokens, because each occurrence of total is one token.",
+      "explanation": "A strong answer keeps the three levels apart: the rule, the text and the record produced. It also says the token is a pair, and does not call total itself a token.",
+      "difficulty": "easy",
+      "tags": ["definitions"],
+      "exams": ["university"]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a token?",
+      "back": "A pair of a token name and an optional attribute value. The token name is an abstract symbol for a kind of lexical unit, and it is what the parser sees.",
+      "tags": ["definitions"]
+    },
+    {
+      "front": "What is a pattern?",
+      "back": "A description of the form that a token's lexemes may take. For a keyword it is the word itself. For an identifier it is a rule many strings match.",
+      "tags": ["definitions"]
+    },
+    {
+      "front": "What is a lexeme?",
+      "back": "The actual characters in the source program that match a token's pattern, and that the lexer treats as an instance of that token.",
+      "tags": ["definitions"]
+    },
+    {
+      "front": "Name the five common classes of tokens.",
+      "back": "Keywords, operators, identifiers, constants and punctuation.",
+      "tags": ["token-classes"]
+    },
+    {
+      "front": "What is the usual attribute value of an identifier token?",
+      "back": "A pointer to its symbol-table entry, which holds details such as its lexeme, its type and where it first appeared.",
+      "tags": ["attributes"]
+    },
+    {
+      "front": "When counting tokens, what happens to comments, whitespace and string contents?",
+      "back": "Comments and whitespace produce no tokens. A whole string literal is one token, however long it is and whatever it contains.",
+      "tags": ["counting"]
+    }
+  ]
+}

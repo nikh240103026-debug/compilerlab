@@ -2,13 +2,16 @@ import type { RouteObject } from 'react-router';
 import { RouteError } from '@/components/route-error';
 import { AppShell, ShellFallback } from '@/layout/app-shell';
 import type { RouteHandle } from '@/layout/use-crumbs';
+import { findVisualizer } from '@/visualizers/registry';
 
 // Every page is its own chunk. Each loader is a stable import() so preloading reuses it.
 export const pages = {
   dashboard: () => import('@/routes/dashboard'),
   learn: () => import('@/routes/learn'),
   learnModule: () => import('@/routes/learn-module'),
+  lesson: () => import('@/routes/lesson'),
   visualize: () => import('@/routes/visualize'),
+  visualizeDetail: () => import('@/routes/visualize-detail'),
   lab: () => import('@/routes/lab'),
   practice: () => import('@/routes/practice'),
   exam: () => import('@/routes/exam'),
@@ -43,15 +46,33 @@ export const routes: RouteObject[] = [
             handle: { crumb: 'Learn' } satisfies RouteHandle,
             children: [
               { index: true, lazy: pages.learn },
+              {
+                path: ':moduleId',
+                handle: {
+                  crumb: ({ params, modules }) =>
+                    modules.find((module) => module.id === params.moduleId)?.title ?? null,
+                } satisfies RouteHandle,
+                children: [
+                  { index: true, lazy: pages.learnModule },
+                  page(':topicId', pages.lesson, ({ params, lessons }) => {
+                    return lessons.find((lesson) => lesson.id === params.topicId)?.title ?? null;
+                  }),
+                ],
+              },
+            ],
+          },
+          {
+            path: 'visualize',
+            handle: { crumb: 'Visualize' } satisfies RouteHandle,
+            children: [
+              { index: true, lazy: pages.visualize },
               page(
-                ':moduleId',
-                pages.learnModule,
-                ({ params, modules }) =>
-                  modules.find((module) => module.id === params.moduleId)?.title ?? null,
+                ':visualizerId',
+                pages.visualizeDetail,
+                ({ params }) => findVisualizer(params.visualizerId)?.title ?? null,
               ),
             ],
           },
-          page('visualize', pages.visualize, 'Visualize'),
           page('lab', pages.lab, 'Lab'),
           page('practice', pages.practice, 'Practice'),
           page('exam', pages.exam, 'Exam prep'),
