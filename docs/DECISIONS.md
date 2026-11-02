@@ -90,3 +90,7 @@ Part 12 lists it under the UI, but Part 14 assigns it to Milestone 4.
 ### Browser tests are separate from `npm run check`
 
 Part 13 defines the check as lint, typecheck, tests and build. Playwright needs a browser that a fresh machine may not have, so it runs as `npm run test:e2e`.
+
+### What the 3-second cold start covers
+
+Measured from fresh clones on Windows 11, `npm start` reports ready in 1.0 to 1.4 seconds on both Node 22 and Node 24, and the production server answers in about 1 second. The very first start after installing took 7 to 13 seconds. The likely cause is the operating system and antivirus reading the new files for the first time, though that is not confirmed. I treat the target as applying to normal starts and have not added a warm-up step to `setup`.
