@@ -1,6 +1,6 @@
 import type { LabEvent, LabExerciseView, LabProgress, LabWorkspace } from '@compilerlab/shared';
 import type { FastifyInstance } from 'fastify';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { request as httpRequest } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -11,7 +11,7 @@ import { buildApp } from '../app';
 import { findRepoRoot, loadConfig } from '../config';
 import { openDatabase, type SqlDatabase } from '../db/driver';
 import { migrate } from '../db/migrate';
-import { createFakeTools, type FakeTools } from '../lab/fake-tools';
+import { createFakeTools, removeTestFolder, type FakeTools } from '../lab/fake-tools';
 import { DEFAULT_LAB_LIMITS } from '../lab/job';
 
 const rootDir = findRepoRoot(dirname(fileURLToPath(import.meta.url)));
@@ -23,7 +23,7 @@ let dataDir: string;
 beforeAll(() => {
   fake = createFakeTools();
 });
-afterAll(() => fake.dispose());
+afterAll(() => fake.dispose(), 15_000);
 
 beforeEach(async () => {
   fake.missing.clear();
@@ -41,8 +41,8 @@ beforeEach(async () => {
 afterEach(async () => {
   await app.close();
   db.close();
-  rmSync(dataDir, { recursive: true, force: true, maxRetries: 30, retryDelay: 100 });
-});
+  await removeTestFolder(dataDir);
+}, 15_000);
 
 type Socket = Awaited<ReturnType<FastifyInstance['injectWS']>>;
 

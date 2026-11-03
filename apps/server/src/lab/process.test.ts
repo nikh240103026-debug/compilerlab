@@ -1,14 +1,13 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
+import { removeTestFolder } from './fake-tools';
 import { describeCrash, readProcessMemory, runProcess } from './process';
 
 const directory = mkdtempSync(join(tmpdir(), 'compilerlab-process-'));
-// A background child from one test may still be using this folder for a moment on Windows.
-afterAll(() =>
-  rmSync(directory, { recursive: true, force: true, maxRetries: 30, retryDelay: 200 }),
-);
+// A background child from one test may still be using this folder for a moment.
+afterAll(() => removeTestFolder(directory), 15_000);
 
 function runNode(
   code: string,

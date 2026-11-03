@@ -1,11 +1,12 @@
 import { loadLabExercises } from '@compilerlab/content';
 import type { LabEvent, LabJob } from '@compilerlab/shared';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { findRepoRoot } from '../config';
+import { removeTestFolder } from './fake-tools';
 import { checkLabJob, DEFAULT_LAB_LIMITS, runLabJob } from './job';
 import { realToolchain } from './toolchain';
 
@@ -24,7 +25,7 @@ const hasGpp = installed('g++');
 
 const rootDir = findRepoRoot(import.meta.dirname);
 const dataDir = mkdtempSync(join(tmpdir(), 'compilerlab-real-tools-'));
-afterAll(() => rmSync(dataDir, { recursive: true, force: true, maxRetries: 30, retryDelay: 100 }));
+afterAll(() => removeTestFolder(dataDir), 15_000);
 
 const toolchain = realToolchain({ flex: '', bison: '', gcc: '', gpp: '', make: '' });
 

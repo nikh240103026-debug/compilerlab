@@ -1,4 +1,5 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { LabToolchain, LabToolId } from './toolchain';
@@ -48,7 +49,23 @@ export interface FakeTools {
   toolchain: LabToolchain;
   /** Tools to pretend are not installed. */
   missing: Set<LabToolId>;
-  dispose(): void;
+  dispose(): Promise<void>;
+}
+
+/**
+ * Removes a test's temporary folder. On Windows, a program that was just killed still holds its
+ * working folder for a moment, and Node 22's rmSync gives up at once. A folder left behind in
+ * the temp directory is harmless, so that alone never fails a test.
+ */
+export async function removeTestFolder(path: string): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    try {
+      await rm(path, { recursive: true, force: true });
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+  }
 }
 
 export function createFakeTools(): FakeTools {
@@ -75,7 +92,6 @@ export function createFakeTools(): FakeTools {
         SystemRoot: process.env.SystemRoot ?? '',
       }),
     },
-    dispose: () =>
-      rmSync(directory, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }),
+    dispose: () => removeTestFolder(directory),
   };
 }

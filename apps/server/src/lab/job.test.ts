@@ -1,9 +1,9 @@
 import type { LabEvent, LabExercise, LabJob } from '@compilerlab/shared';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createFakeTools, type FakeTools } from './fake-tools';
+import { createFakeTools, removeTestFolder, type FakeTools } from './fake-tools';
 import {
   checkLabJob,
   DEFAULT_LAB_LIMITS,
@@ -19,12 +19,12 @@ let dataDir: string;
 beforeAll(() => {
   fake = createFakeTools();
 });
-afterAll(() => fake.dispose());
+afterAll(() => fake.dispose(), 15_000);
 beforeEach(() => {
   dataDir = mkdtempSync(join(tmpdir(), 'compilerlab-job-'));
   fake.missing.clear();
 });
-afterEach(() => rmSync(dataDir, { recursive: true, force: true, maxRetries: 30, retryDelay: 100 }));
+afterEach(() => removeTestFolder(dataDir), 15_000);
 
 const job = (fields: Partial<LabJob>): LabJob => ({
   pipeline: 'c',
