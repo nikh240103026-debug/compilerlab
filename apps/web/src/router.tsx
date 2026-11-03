@@ -13,6 +13,7 @@ export const pages = {
   visualize: () => import('@/routes/visualize'),
   visualizeDetail: () => import('@/routes/visualize-detail'),
   lab: () => import('@/routes/lab'),
+  labWorkspace: () => import('@/routes/lab-workspace'),
   practice: () => import('@/routes/practice'),
   exam: () => import('@/routes/exam'),
   tutor: () => import('@/routes/tutor'),
@@ -73,7 +74,17 @@ export const routes: RouteObject[] = [
               ),
             ],
           },
-          page('lab', pages.lab, 'Lab'),
+          {
+            path: 'lab',
+            handle: { crumb: 'Lab' } satisfies RouteHandle,
+            children: [
+              { index: true, lazy: pages.lab },
+              page(':exerciseId', pages.labWorkspace, ({ params }) => {
+                const words = (params.exerciseId ?? '').replace(/-/g, ' ');
+                return words.charAt(0).toUpperCase() + words.slice(1);
+              }),
+            ],
+          },
           page('practice', pages.practice, 'Practice'),
           page('exam', pages.exam, 'Exam prep'),
           page('tutor', pages.tutor, 'AI tutor'),

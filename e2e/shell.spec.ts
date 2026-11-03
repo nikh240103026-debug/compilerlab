@@ -164,12 +164,13 @@ test('shows a clear banner when the server stops responding', async ({ page }) =
   await page.route('**/api/**', (route) => route.abort());
   await page.getByRole('link', { name: 'Lab', exact: true }).click();
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-  await expect(page.getByRole('alert').filter({ hasText: 'not responding' })).toBeVisible({
-    timeout: 15000,
-  });
+  // The Lab page reports the outage in its own panels too, so look for the shell's banner.
+  const reconnect = page.getByRole('button', { name: 'Reconnect' });
+  await expect(reconnect).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('alert').filter({ has: reconnect })).toContainText('not responding');
   await page.unroute('**/api/**');
-  await page.getByRole('button', { name: 'Reconnect' }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'not responding' })).toBeHidden();
+  await reconnect.click();
+  await expect(reconnect).toBeHidden();
 });
 
 test('the split pane resizes with the keyboard', async ({ page }) => {

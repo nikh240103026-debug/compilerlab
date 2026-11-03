@@ -1,0 +1,57 @@
+{
+  "id": "maximal-munch",
+  "module": "lexical-analysis",
+  "topics": ["finite-automata", "lexer-design"],
+  "order": 4,
+  "title": "Longest match on operators",
+  "difficulty": "easy",
+  "tags": ["longest match", "tokens"],
+  "exams": ["university"],
+  "brief": "Print a name for each operator in the input, one per line: + is PLUS, ++ is INCR, += is ADD_ASSIGN, = is ASSIGN, and == is EQ. Ignore everything else.",
+  "pipeline": "lex",
+  "stdin": "a += b; c++; d = e == f + 1;\n",
+  "tests": [
+    {
+      "name": "Each operator",
+      "input": "+ ++ += = ==",
+      "expected": "PLUS\nINCR\nADD_ASSIGN\nASSIGN\nEQ",
+      "hidden": false
+    },
+    {
+      "name": "In code",
+      "input": "x+=1",
+      "expected": "ADD_ASSIGN",
+      "hidden": false
+    },
+    {
+      "name": "Run together",
+      "input": "+++",
+      "expected": "INCR\nPLUS",
+      "hidden": true
+    },
+    {
+      "name": "Four equals signs",
+      "input": "====",
+      "expected": "EQ\nEQ",
+      "hidden": true
+    },
+    {
+      "name": "Plus then equals equals",
+      "input": "+==",
+      "expected": "ADD_ASSIGN\nASSIGN",
+      "hidden": true
+    },
+    {
+      "name": "No operators",
+      "input": "abc 123\n",
+      "expected": "",
+      "hidden": true
+    }
+  ],
+  "hints": [
+    "flex always prefers the longest match, so you do not have to order these carefully.",
+    "Quote multi-character operators, as in \"++\". An unquoted + means one or more of something.",
+    "Finish with .|\\n and an empty action, or the default rule will echo the other characters."
+  ],
+  "explanation": "Flex tries to extend every match as far as possible. On +++ it takes ++ first, because that is the longest match from the start of the input, and only then sees the last +. This is why C reads x+++y as x++ + y."
+}

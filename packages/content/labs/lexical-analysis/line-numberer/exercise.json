@@ -1,0 +1,51 @@
+{
+  "id": "line-numberer",
+  "module": "lexical-analysis",
+  "topics": ["lex-and-flex"],
+  "order": 2,
+  "title": "Line numberer",
+  "difficulty": "easy",
+  "tags": ["flex", "ECHO", "regular expressions"],
+  "exams": ["university"],
+  "brief": "Print the input with each line prefixed by its number, a colon and a space, counting from 1. Blank lines get a number too. A last line with no newline still counts as a line, and the output should end it with a newline.",
+  "pipeline": "lex",
+  "stdin": "first\n\nthird\n",
+  "tests": [
+    {
+      "name": "Two lines",
+      "input": "a\nb\n",
+      "expected": "1: a\n2: b",
+      "hidden": false
+    },
+    {
+      "name": "A blank line",
+      "input": "x\n\ny\n",
+      "expected": "1: x\n2:\n3: y",
+      "hidden": false
+    },
+    {
+      "name": "Empty input",
+      "input": "",
+      "expected": "",
+      "hidden": true
+    },
+    {
+      "name": "No final newline",
+      "input": "only",
+      "expected": "1: only",
+      "hidden": true
+    },
+    {
+      "name": "Two blank lines",
+      "input": "\n\n",
+      "expected": "1:\n2:",
+      "hidden": true
+    }
+  ],
+  "hints": [
+    "A rule can match a whole line at once. In flex, . matches anything except a newline.",
+    "Write one rule for a line with its newline, .*\\n, and one for a final line without one, .+",
+    "Use printf with %s and yytext. For the first rule, yytext already ends with the newline."
+  ],
+  "explanation": ".*\\n and .+ cover every case between them. The first takes a complete line, including an empty one. The second only fires when the input ends without a newline, because otherwise the first rule is longer."
+}

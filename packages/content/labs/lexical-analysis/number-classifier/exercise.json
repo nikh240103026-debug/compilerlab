@@ -1,0 +1,57 @@
+{
+  "id": "number-classifier",
+  "module": "lexical-analysis",
+  "topics": ["regular-expressions", "tokens-lexemes-patterns"],
+  "order": 5,
+  "title": "Number classifier",
+  "difficulty": "medium",
+  "tags": ["regular expressions", "definitions", "longest match"],
+  "exams": ["university"],
+  "brief": "Find the numbers in the input and print each on its own line with its kind. HEX is 0x or 0X followed by hex digits. FLOAT is digits with a fraction, an exponent or both, as in 3.14, 2.5e3 or 1e5. INT is plain digits. Ignore everything else.",
+  "pipeline": "lex",
+  "stdin": "x = 42; y = 3.14; z = 0x1F; w = 1e5;\n",
+  "tests": [
+    {
+      "name": "Each kind",
+      "input": "42 3.14 0x1F",
+      "expected": "INT 42\nFLOAT 3.14\nHEX 0x1F",
+      "hidden": false
+    },
+    {
+      "name": "An exponent",
+      "input": "2.5e3 1E-2",
+      "expected": "FLOAT 2.5e3\nFLOAT 1E-2",
+      "hidden": false
+    },
+    {
+      "name": "A leading zero is still INT",
+      "input": "007",
+      "expected": "INT 007",
+      "hidden": true
+    },
+    {
+      "name": "A lone dot is not a fraction",
+      "input": ".5 7.",
+      "expected": "INT 5\nINT 7",
+      "hidden": true
+    },
+    {
+      "name": "Text around numbers",
+      "input": "a12b",
+      "expected": "INT 12",
+      "hidden": true
+    },
+    {
+      "name": "No numbers",
+      "input": "none here\n",
+      "expected": "",
+      "hidden": true
+    }
+  ],
+  "hints": [
+    "Named definitions keep this readable. Put DIGIT [0-9] in the first section and write {DIGIT}+ in the rules.",
+    "An exponent is [eE][-+]?{DIGIT}+. Make it optional when there is a fraction, and required when there is not.",
+    "Longest match separates them: 3.14 could start as INT 3, but FLOAT takes more characters, so FLOAT wins."
+  ],
+  "explanation": "Each kind gets its own rule, and longest match picks the right one. On 0x1F the INT rule only reaches 0, while HEX reaches the end. A lone dot never starts a number, so .5 is an ignored dot followed by INT 5."
+}

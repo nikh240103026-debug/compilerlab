@@ -1,0 +1,57 @@
+{
+  "id": "token-recognizer",
+  "module": "lexical-analysis",
+  "topics": ["tokens-lexemes-patterns", "lexer-design", "role-of-the-lexer"],
+  "order": 6,
+  "title": "Token recognizer",
+  "difficulty": "medium",
+  "tags": ["tokens", "keywords", "rule order"],
+  "exams": ["university"],
+  "brief": "Print one token per line for a small C-like language. KEYWORD for if, else, while, int and return. ID for identifiers, which start with a letter or underscore. NUM for digits. OP for == != <= >= = < > + - * /. PUNCT for ( ) { } ;. Skip whitespace. Anything else is ERROR. Write each token as its kind, a space, then its text.",
+  "pipeline": "lex",
+  "stdin": "int count = 10;\nif (count >= 3) { return count; }\n",
+  "tests": [
+    {
+      "name": "A declaration",
+      "input": "int x = 1;",
+      "expected": "KEYWORD int\nID x\nOP =\nNUM 1\nPUNCT ;",
+      "hidden": false
+    },
+    {
+      "name": "Two-character operators",
+      "input": "a<=b",
+      "expected": "ID a\nOP <=\nID b",
+      "hidden": false
+    },
+    {
+      "name": "A keyword inside a name",
+      "input": "iffy if",
+      "expected": "ID iffy\nKEYWORD if",
+      "hidden": true
+    },
+    {
+      "name": "An unknown character",
+      "input": "a @ b",
+      "expected": "ID a\nERROR @\nID b",
+      "hidden": true
+    },
+    {
+      "name": "Underscores and digits",
+      "input": "_x1 2y",
+      "expected": "ID _x1\nNUM 2\nID y",
+      "hidden": true
+    },
+    {
+      "name": "Whitespace only",
+      "input": " \t\n",
+      "expected": "",
+      "hidden": true
+    }
+  ],
+  "hints": [
+    "Put the keyword rule above the identifier rule. On \"if\" both match two characters, so the earlier rule wins.",
+    "Longest match handles names like iffy: the identifier rule matches four characters, and the keyword rule only two.",
+    "List the two-character operators in one quoted alternation, and use a character class for the single ones."
+  ],
+  "explanation": "This is the keyword-versus-identifier pattern from the lessons. Rule order settles ties, which makes \"if\" a keyword, and longest match makes \"iffy\" an identifier. A catch-all . rule at the end turns unknown characters into errors, so nothing falls through to the default echo."
+}

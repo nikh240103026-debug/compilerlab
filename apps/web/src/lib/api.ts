@@ -2,6 +2,10 @@ import type {
   ApiErrorBody,
   CourseModule,
   HealthResponse,
+  LabExerciseView,
+  LabProgress,
+  LabSolution,
+  LabWorkspace,
   LessonSummary,
   Settings,
   SettingsPatch,
@@ -72,6 +76,16 @@ export const api = {
   progress: () => request<TopicProgress[]>('/api/progress'),
   updateProgress: (topicId: string, patch: TopicProgressPatch) =>
     send<TopicProgress>('PATCH', `/api/progress/${encodeURIComponent(topicId)}`, patch),
+  labExercises: () => request<LabExerciseView[]>('/api/lab/exercises'),
+  labSolution: (id: string) =>
+    request<LabSolution>(`/api/lab/exercises/${encodeURIComponent(id)}/solution`),
+  labProgress: () => request<LabProgress[]>('/api/lab/progress'),
+  labWorkspace: (id: string) =>
+    request<{ workspace: LabWorkspace | null }>(`/api/lab/workspaces/${encodeURIComponent(id)}`),
+  saveLabWorkspace: (id: string, workspace: LabWorkspace) =>
+    send<void>('PUT', `/api/lab/workspaces/${encodeURIComponent(id)}`, workspace),
+  deleteLabWorkspace: (id: string) =>
+    send<void>('DELETE', `/api/lab/workspaces/${encodeURIComponent(id)}`),
 };
 
 /** Turns anything that was thrown into a sentence a student can read. */

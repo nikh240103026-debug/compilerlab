@@ -3,9 +3,10 @@ import { notFoundBody, registerErrorHandling } from './plugins/errors';
 import { registerLocalOnly } from './plugins/local-only';
 import { registerWebApp } from './plugins/web-app';
 import { registerCoreRoutes, type RouteDeps } from './routes/core';
+import { registerLabRoutes, type LabRouteDeps } from './routes/lab';
 import { registerLearningRoutes } from './routes/learning';
 
-export interface BuildAppOptions extends RouteDeps {
+export interface BuildAppOptions extends RouteDeps, LabRouteDeps {
   /** Folder of the built web app. Dev mode leaves this out and Vite serves the pages. */
   webRoot?: string;
 }
@@ -25,6 +26,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   registerErrorHandling(app);
   registerCoreRoutes(app, deps);
   registerLearningRoutes(app, deps);
+  await registerLabRoutes(app, deps);
 
   if (webRoot) {
     await registerWebApp(app, webRoot);

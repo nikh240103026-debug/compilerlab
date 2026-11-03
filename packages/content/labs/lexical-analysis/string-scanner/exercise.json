@@ -1,0 +1,63 @@
+{
+  "id": "string-scanner",
+  "module": "lexical-analysis",
+  "topics": ["lexical-errors", "lex-and-flex"],
+  "order": 9,
+  "title": "String literal scanner",
+  "difficulty": "hard",
+  "tags": ["strings", "escapes", "error recovery", "yylineno"],
+  "exams": ["university"],
+  "brief": "Find string literals. For each complete one, print STRING followed by the literal with its quotes. A backslash escapes the next character, so \\\" does not end a string. A string must close on the line where it opens. If it does not, print: ERROR line L: unterminated string. Then carry on from the next line. Ignore everything else.",
+  "pipeline": "lex",
+  "stdin": "x = \"hello\";\ny = \"say \\\"hi\\\"\";\nz = \"oops\nw = \"fine\";\n",
+  "tests": [
+    {
+      "name": "A simple string",
+      "input": "x = \"hi\";\n",
+      "expected": "STRING \"hi\"",
+      "hidden": false
+    },
+    {
+      "name": "Escaped quotes",
+      "input": "y = \"a\\\"b\";\n",
+      "expected": "STRING \"a\\\"b\"",
+      "hidden": false
+    },
+    {
+      "name": "Unterminated",
+      "input": "\"open\n\"ok\"\n",
+      "expected": "ERROR line 1: unterminated string\nSTRING \"ok\"",
+      "hidden": true
+    },
+    {
+      "name": "On a later line",
+      "input": "\n\n\"open\n",
+      "expected": "ERROR line 3: unterminated string",
+      "hidden": true
+    },
+    {
+      "name": "An escaped backslash ends cleanly",
+      "input": "\"a\\\\\"\n",
+      "expected": "STRING \"a\\\\\"",
+      "hidden": true
+    },
+    {
+      "name": "Empty string",
+      "input": "\"\"",
+      "expected": "STRING \"\"",
+      "hidden": true
+    },
+    {
+      "name": "Two on one line",
+      "input": "\"a\" \"b\"",
+      "expected": "STRING \"a\"\nSTRING \"b\"",
+      "hidden": true
+    }
+  ],
+  "hints": [
+    "Inside a string, each item is either an ordinary character, [^\"\\\\\\n], or an escape pair, \\\\. So the body is ([^\"\\\\\\n]|\\\\.)*",
+    "A complete string is a quote, that body and a closing quote. An unterminated string is the same thing without the closing quote.",
+    "Longest match picks the complete form whenever it exists. Add %option yylineno for the line number, and remember that the unterminated rule does not consume the newline."
+  ],
+  "explanation": "Two patterns share one body. If a closing quote exists, the complete rule matches one character more and wins by longest match. If not, the unterminated rule takes over and stops before the newline, so scanning resumes cleanly on the next line. Treating \\\\. as one item is what makes \"a\\\\\" close properly: the backslash pair is consumed as a unit."
+}

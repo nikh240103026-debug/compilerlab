@@ -32,6 +32,21 @@ export const MIGRATIONS: readonly Migration[] = [
       ) STRICT;
     `,
   },
+  {
+    version: 3,
+    name: 'lab',
+    sql: `
+      CREATE TABLE lab_workspaces (
+        id TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      ) STRICT;
+      CREATE TABLE lab_progress (
+        exercise_id TEXT PRIMARY KEY,
+        passed_at TEXT NOT NULL DEFAULT (datetime('now'))
+      ) STRICT;
+    `,
+  },
 ];
 
 export class DatabaseTooNewError extends Error {

@@ -1,5 +1,5 @@
 import type { ApiErrorBody } from '@compilerlab/shared';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
@@ -18,8 +18,14 @@ export function isSameOrigin(origin: string | undefined, host: string | undefine
   }
 }
 
-function forbidden(message: string): ApiErrorBody {
-  return { error: { code: 'forbidden', message } };
+function refuse(request: FastifyRequest, reply: FastifyReply, message: string) {
+  // After an upgrade request, the socket belongs to no HTTP exchange, so nothing else closes it.
+  if (request.headers.upgrade) {
+    reply.header('Connection', 'close');
+    reply.raw.once('finish', () => request.raw.socket?.destroy());
+  }
+  const body: ApiErrorBody = { error: { code: 'forbidden', message } };
+  return reply.code(403).send(body);
 }
 
 /**
@@ -32,14 +38,14 @@ export function registerLocalOnly(app: FastifyInstance): void {
   app.addHook('onRequest', async (request, reply) => {
     const { host, origin } = request.headers;
     if (!isLoopbackHost(host)) {
-      return reply
-        .code(403)
-        .send(forbidden('CompilerLab only accepts requests addressed to this computer.'));
+      return refuse(
+        request,
+        reply,
+        'CompilerLab only accepts requests addressed to this computer.',
+      );
     }
     if (!isSameOrigin(origin, host)) {
-      return reply
-        .code(403)
-        .send(forbidden('CompilerLab only accepts requests from its own pages.'));
+      return refuse(request, reply, 'CompilerLab only accepts requests from its own pages.');
     }
   });
 }

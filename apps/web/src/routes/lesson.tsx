@@ -37,6 +37,7 @@ import { SplitPane } from '@/components/split-pane';
 import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLabExercises, useLabProgress } from '@/hooks/use-lab';
 import { useLessons, useProgress, useTopicBank, useUpdateProgress } from '@/hooks/use-lessons';
 import { useModules } from '@/hooks/use-system';
 import { describeError } from '@/lib/api';
@@ -184,6 +185,32 @@ function LessonHeader({
   );
 }
 
+function TopicExercises({ topicId }: { topicId: string }) {
+  const { data: exercises } = useLabExercises();
+  const { data: progress } = useLabProgress();
+  const forTopic = exercises?.filter((exercise) => exercise.topics.includes(topicId)) ?? [];
+  if (forTopic.length === 0) return null;
+  const passed = new Set(progress?.map((item) => item.exerciseId));
+  return (
+    <ul aria-label="Lab exercises for this topic" className="space-y-2">
+      {forTopic.map((exercise) => (
+        <li key={exercise.id}>
+          <Link
+            to={`/lab/${exercise.id}`}
+            className="flex items-center gap-2 rounded-lg border border-line bg-surface p-3 text-sm font-medium transition-colors duration-(--duration-fast) hover:border-accent"
+          >
+            <FlaskConical aria-hidden="true" className="size-4 shrink-0 text-accent" />
+            {exercise.title}
+            <span className="ml-auto text-xs font-normal text-ink-muted">
+              {passed.has(exercise.id) ? 'Passed' : exercise.difficulty}
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function BankSections({ lesson, bank }: { lesson: LessonSummary; bank: TopicBank }) {
   const { mutate } = useUpdateProgress(lesson.id);
   const askAi = useAskAi();
@@ -198,10 +225,11 @@ function BankSections({ lesson, bank }: { lesson: LessonSummary; bank: TopicBank
       </Section>
 
       <Section id="lab-heading" title="Lab">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface p-4 text-sm">
+        <TopicExercises topicId={lesson.id} />
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface p-4 text-sm">
           <p className="min-w-0 flex-1">
-            Hands-on exercises with real flex and gcc for this topic arrive with the lab in
-            Milestone 3.
+            Write and run your own Lex, C and C++ programs in the lab, with real flex and gcc if you
+            have them.
           </p>
           <Button asChild size="sm">
             <Link to="/lab">

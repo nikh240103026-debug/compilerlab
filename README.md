@@ -2,7 +2,7 @@
 
 Learn Compiler Design from theory to practice on your own computer: lessons, step-by-step visualizers, real Lex, Yacc, C and C++ labs, exam practice and an AI tutor. Everything runs locally. The only network call the app will ever make is to the Gemini API, and it stays fully usable without one.
 
-**Status:** Milestones 1 and 2 of 12 are complete. The foundation is in place, along with the regex and automata engine, a lexer generator, eight step-by-step visualizers, and the lessons for Modules 0 and 1. The lab with real flex and gcc is next, in Milestone 3. See [the milestones](docs/SPEC.md#part-14-milestones-give-these-to-claude-code-one-at-a-time).
+**Status:** Milestones 1 to 3 of 12 are complete. The foundation is in place, along with the regex and automata engine, a lexer generator, eight step-by-step visualizers, the lessons for Modules 0 and 1, and the lab with 10 Module 1 exercises. The AI tutor is next, in Milestone 4. See [the milestones](docs/SPEC.md#part-14-milestones-give-these-to-claude-code-one-at-a-time).
 
 ## Quick start
 
@@ -20,8 +20,14 @@ Your browser opens at <http://127.0.0.1:5173>. Press Ctrl+C in the terminal to s
 
 Setup creates `.env`, installs dependencies and checks your computer. It prints exact commands for anything that is missing. Two things are optional, and the app has a fallback for each:
 
-- **flex, bison, gcc, g++, make:** without them, the lab labels its results Simulated.
+- **flex, bison, gcc, g++, make:** without them, Lex programs run in a built-in teaching engine, labeled Simulated, and C and C++ programs show the commands to install a compiler.
 - **A Gemini key:** without one, AI features show an offline state. To add one, [create a key](https://aistudio.google.com/apikey), put it in `.env` as `GEMINI_API_KEY=your-key`, and restart. The key stays on the local server and never reaches the browser.
+
+## The lab
+
+The lab has a code editor, a terminal, an input pane and tabs for the build log, output, generated files, the token stream, a visual trace and tests. It runs each job in a new folder under `data/runs`, and stops any program that runs longer than 5 seconds, prints more than 1 MB or uses more than 256 MB.
+
+These limits protect you from accidents like an infinite loop. They are not a security sandbox: a program you run can do anything you can, so only run code you trust.
 
 ## Commands
 
@@ -49,6 +55,8 @@ Run `npm run doctor` first. It gives exact fixes for your operating system.
 | A database error at startup          | Run `npm run reset`. It keeps your backups in `data/backups`.                                                                        |
 | "better-sqlite3 could not load"      | The app has switched to Node's built-in `node:sqlite` and still works. To restore it, delete `node_modules` and run `npm run setup`. |
 | The wrong Node version               | Node 22 is the supported version. Newer versions get a warning; older ones cannot run.                                               |
+| The lab says Simulated               | flex or gcc was not found. Run `npm run doctor` for the install commands, or set their paths in Settings.                            |
+| "Simulated mode does not support..." | That C feature needs the real tools. Install flex and gcc, or rewrite it with the features listed in `docs/DECISIONS.md`.            |
 
 ### Windows
 

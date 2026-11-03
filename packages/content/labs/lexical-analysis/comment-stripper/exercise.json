@@ -1,0 +1,57 @@
+{
+  "id": "comment-stripper",
+  "module": "lexical-analysis",
+  "topics": ["lex-and-flex", "lexer-design"],
+  "order": 7,
+  "title": "Comment stripper",
+  "difficulty": "medium",
+  "tags": ["start conditions", "BEGIN", "comments"],
+  "exams": ["university"],
+  "brief": "Copy C source to the output with its comments removed. Remove /* block */ comments, which can span lines, and // line comments, but keep the newline at the end of a line comment. Text inside a \"string\" is not a comment, so leave it alone.",
+  "pipeline": "lex",
+  "stdin": "int a; /* the count */\nint b; // the total\nchar *s = \"/* keep me */\";\n",
+  "tests": [
+    {
+      "name": "A block comment",
+      "input": "int a; /* c */ int b;\n",
+      "expected": "int a;  int b;",
+      "hidden": false
+    },
+    {
+      "name": "A line comment",
+      "input": "x; // note\ny;\n",
+      "expected": "x; \ny;",
+      "hidden": false
+    },
+    {
+      "name": "A comment across lines",
+      "input": "a/* x\ny */b\n",
+      "expected": "ab",
+      "hidden": true
+    },
+    {
+      "name": "Comments inside strings stay",
+      "input": "s = \"/* keep */ // this\";\n",
+      "expected": "s = \"/* keep */ // this\";",
+      "hidden": true
+    },
+    {
+      "name": "An escaped quote in a string",
+      "input": "s = \"a\\\"/*b\";/*c*/\n",
+      "expected": "s = \"a\\\"/*b\";",
+      "hidden": true
+    },
+    {
+      "name": "Extra stars",
+      "input": "/***/x/* * / **/y\n",
+      "expected": "xy",
+      "hidden": true
+    }
+  ],
+  "hints": [
+    "A regular expression for a block comment is hard to get right. Use a start condition instead: %x COMMENT.",
+    "On \"/*\" run BEGIN(COMMENT). Inside, match \"*/\" to go back with BEGIN(INITIAL), and throw away everything else with <COMMENT>.|\\n.",
+    "A second start condition for strings keeps comment markers inside them safe. Remember that \\\" does not end a string."
+  ],
+  "explanation": "Start conditions turn the scanner into a small state machine: normal text, inside a comment, inside a string. Each state has its own rules, which is much clearer than one huge regular expression. It also avoids the classic mistake of \"/*\".*\"*/\", which uses longest match to swallow everything up to the last comment in the file."
+}

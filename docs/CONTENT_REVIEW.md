@@ -16,6 +16,8 @@ Nothing here has been run with real tools: flex, bison and gcc were not installe
 
 ## Run these samples
 
+The lab can now run Lex samples, but the machine these were written on has no flex or gcc, so **no exercise or lesson sample has been run with the real tools yet.** The word counter's answer has been checked in Simulated mode only. Before release, run `npx vitest run real-tools` on a machine with the tools, which runs every exercise solution through real flex and gcc.
+
 | Where                            | Sample                                                                                           |
 | -------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `construction-tools.mdx`         | The `calc.l` and `calc.y` calculator                                                             |

@@ -1,0 +1,57 @@
+{
+  "id": "identifier-table",
+  "module": "lexical-analysis",
+  "topics": ["lexer-design", "role-of-the-lexer"],
+  "order": 10,
+  "title": "Identifier table",
+  "difficulty": "hard",
+  "tags": ["symbol table", "keywords", "C code in actions"],
+  "exams": ["university"],
+  "brief": "Build a small symbol table. List each identifier once, in the order it first appears, followed by how many times it appears. Skip the keywords if, else, while, int and return. Numbers are not identifiers, so 2x is the number 2 and then the identifier x. Print one identifier per line, as: name count. Assume at most 100 identifiers of at most 31 characters.",
+  "pipeline": "lex",
+  "stdin": "int total = 0;\nwhile (i < 10) { total = total + i; i = i + 1; }\n",
+  "tests": [
+    {
+      "name": "A few names",
+      "input": "int x; x = y + x;",
+      "expected": "x 3\ny 1",
+      "hidden": false
+    },
+    {
+      "name": "Keywords are skipped",
+      "input": "if (a) return a; else return b;",
+      "expected": "a 2\nb 1",
+      "hidden": false
+    },
+    {
+      "name": "No identifiers",
+      "input": "int 42 ;",
+      "expected": "",
+      "hidden": true
+    },
+    {
+      "name": "First-seen order",
+      "input": "c b a b c c",
+      "expected": "c 3\nb 2\na 1",
+      "hidden": true
+    },
+    {
+      "name": "Numbers are not names",
+      "input": "a1 1a",
+      "expected": "a1 1\na 1",
+      "hidden": true
+    },
+    {
+      "name": "A keyword as part of a name",
+      "input": "iffy if",
+      "expected": "iffy 1",
+      "hidden": true
+    }
+  ],
+  "hints": [
+    "Keep two arrays in the %{ %} block: char names[100][32] and int counts[100], plus how many are in use.",
+    "Write a helper in the last section that loops over the names with strcmp, and adds a new name with strcpy if none match.",
+    "Copy the text with strcpy. yytext changes on every match, so saving the pointer does not work. This is the classic flex bug."
+  ],
+  "explanation": "A lexer often needs a table like this, and the rule actions are ordinary C, so the table lives in plain arrays. strcpy matters: yytext points into the scanner's own buffer, which the next match overwrites, so a table of saved pointers would end up full of garbage. Real compilers use a hash table here for speed, but the idea is the same."
+}

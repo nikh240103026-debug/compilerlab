@@ -84,3 +84,21 @@ git clone . ../compilerlab-fresh
 ```
 
 Then, in that folder, run `npm run setup` and `npm start`. Use Node 22 with the npm it ships with, on a machine without a C++ toolchain if you can.
+
+## The lab
+
+The lab has three layers of tests, because the real tools are not on every machine.
+
+| What                                | Where                                    | Needs real tools                      |
+| ----------------------------------- | ---------------------------------------- | ------------------------------------- |
+| The Simulated engine                | `packages/engine/src/flex`, `minic`      | No                                    |
+| Limits on running programs          | `apps/server/src/lab/process.test.ts`    | No                                    |
+| Pipelines, with stand-in tools      | `apps/server/src/lab/job.test.ts`        | No                                    |
+| The WebSocket and its guard         | `apps/server/src/routes/lab.test.ts`     | No                                    |
+| Every exercise solution and starter | `packages/content/src/labs.test.ts`      | No                                    |
+| The same pipelines, with real tools | `apps/server/src/lab/real-tools.test.ts` | Yes, and it skips itself without them |
+| The whole page in a browser         | `e2e/lab.spec.ts`                        | One test, which skips itself          |
+
+`fake-tools.ts` has stand-ins for flex and gcc, written in JavaScript, that copy the real tools' message formats. They prove the pipeline logic, but they cannot prove the formats are right. Only `real-tools.test.ts` can do that, so **run the tests on a machine with flex and gcc before trusting a change to `diagnostics.ts`, `flex-trace.ts` or the pipelines.** A run that skipped those tests says so in its summary.
+
+The exercise tests run each solution through Simulated mode, and check that each starter runs but does not already pass. `real-tools.test.ts` runs the same solutions through real flex and gcc, which is what shows the exercises work in both.

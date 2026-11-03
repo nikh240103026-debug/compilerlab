@@ -153,6 +153,25 @@ Each type adds its own fields:
 
 For a `regex` problem, `accepts` and `rejects` are example strings the tests verify against `reference`.
 
+## Lab exercises
+
+Each exercise is a folder under `packages/content/labs/<module>/<id>/`:
+
+```text
+word-counter/
+  exercise.json
+  starter/word_count.l
+  solution/word_count.l
+```
+
+`exercise.json` holds the id, module, the topics whose lessons should link to it, order, title, difficulty, tags, exams, the brief, the pipeline, the starting input, the tests, at least two hints, and an explanation shown with the solution. Each test has a name, an input and the expected output. Mark some with `"hidden": true`. There must be at least one of each kind.
+
+Output comparison ignores line endings and spaces at the ends of lines. Everything else must match.
+
+Write solutions that work in real flex and gcc **and** in Simulated mode, so stick to the features listed in `docs/DECISIONS.md`. Include the headers real C needs, even though Simulated mode ignores them.
+
+The starter should compile and run, with `TODO` comments where the work goes. A test fails if a starter already passes every test, or if a solution fails any.
+
 ## What the tests check
 
 For every topic: frontmatter is valid, prerequisites exist, the template's headings are present, the MDX and its math compile, only the three components are used, every regex in a `TryIt` or `AutomatonFigure` parses, the bank is valid, MCQ options are distinct, `regex` problems agree with the engine, and there is no placeholder text.

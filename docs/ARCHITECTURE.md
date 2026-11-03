@@ -46,7 +46,7 @@ Production (npm run build && npm run start:prod)
 | `GET /api/progress`                 | Progress on all topics                                                |
 | `PATCH /api/progress/:id`           | Records that a topic was read, explored, or a quiz score              |
 
-Later milestones add `/api/lab`, `/api/ai` and `/api/export`.
+Later milestones add `/api/ai` and `/api/export`. The lab's routes are described under Lab below.
 
 **Errors.** `plugins/errors.ts` turns every failure into `{ error: { code, message, details? } }`. Messages are written for students, and internals stay in the server log.
 
@@ -125,8 +125,33 @@ A topic is two files: an MDX lesson and a JSON question bank (see [CONTENT_GUIDE
 - The server reads frontmatter and banks from disk on each request, so a new topic needs no restart. A broken file is skipped and logged, and `npm test` fails on it.
 - The web app compiles MDX through Vite and loads each lesson as its own chunk. Math is rendered at build time.
 - `routes/lesson.tsx` lays out the template in a split pane: the lesson on the left, with practice, quiz, summary and flashcards below it, and the visualizers on the right.
+- Lab work lives in the `lab_workspaces` and `lab_progress` tables.
 - Progress lives in the `topic_progress` table and only moves forward. `@compilerlab/shared/progress` holds the completion rule and mastery formula.
 
 ## Environment checks
 
 `scripts/lib/checks.mjs` holds the checks and the per-OS install commands. `npm run doctor` and `GET /api/system/status` both use it, so the terminal and the Settings page always agree. It uses only Node built-ins because it has to work before `npm install`.
+
+## Lab
+
+The lab runs a student's code with the real tools, or in the teaching engine if they are missing.
+
+| Route                                          | Purpose                                               |
+| ---------------------------------------------- | ----------------------------------------------------- |
+| `GET /api/lab/exercises`                       | Exercises, without solutions or hidden tests          |
+| `GET /api/lab/exercises/:id/solution`          | One solution, when a student asks for it              |
+| `GET /api/lab/progress`                        | Which exercises have passed                           |
+| `GET`, `PUT`, `DELETE /api/lab/workspaces/:id` | A student's saved files, by exercise id or `scratch`  |
+| `GET /api/lab/ws`                              | The WebSocket that runs jobs and streams their events |
+
+A job goes through `apps/server/src/lab`:
+
+1. `routes/lab.ts` validates each message with the schemas in `@compilerlab/shared`. Bad file names, flags and standards stop here.
+2. `job.ts` decides between real tools and Simulated mode. Lex falls back to Simulated. C and C++ show install commands instead.
+3. For real tools, `runs.ts` makes a new folder under `data/runs` and writes the files, and `process.ts` runs each step with its limits. Old runs are swept when a job starts: anything over an hour old, and all but the latest 20.
+4. For Simulated mode, `compileScanner` and `runScanner` in `packages/engine/src/flex` do the same work in-process, in small slices.
+5. `diagnostics.ts` turns tool output into structured errors with plain-English explanations. `flex-trace.ts` pulls the token stream out of the scanner's `-d` output.
+
+Both engines send the same events, listed as `LabEvent` in `packages/shared/src/lab.ts`, so the page does not care which one ran. `check` runs every test against one build and records a pass in `lab_progress`.
+
+In the browser, `apps/web/src/lab/lab-run.ts` holds the job's state in a reducer. `routes/lab-workspace.tsx` is a small chunk, and Monaco and xterm are lazy chunks behind it, so they load only when a workspace opens. Monaco is about 1 MB gzipped, and initial JS does not grow.

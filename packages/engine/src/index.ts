@@ -14,3 +14,7 @@ export * from './automata/direct';
 export * from './lexer/mini-lex';
 export * from './lexer/spec';
 export * from './lexer/input-buffer';
+export * from './flex/bytes';
+export * from './flex/spec';
+export * from './flex/simulate';
+export * from './flex/playground';

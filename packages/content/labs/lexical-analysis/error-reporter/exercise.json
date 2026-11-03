@@ -1,0 +1,57 @@
+{
+  "id": "error-reporter",
+  "module": "lexical-analysis",
+  "topics": ["lexical-errors"],
+  "order": 8,
+  "title": "Lexical error reporter",
+  "difficulty": "medium",
+  "tags": ["error recovery", "line tracking", "yylineno"],
+  "exams": ["university"],
+  "brief": "Scan a tiny language of identifiers, numbers, whitespace and the symbols + - * / = ;. For any other character, print: line L, column C: unexpected X. Columns count from 1. Keep going after an error, and finish by printing how many errors there were, as: N errors",
+  "pipeline": "lex",
+  "stdin": "total = 3 + 4;\nbad = 5 $ 6;\nworse # = ?;\n",
+  "tests": [
+    {
+      "name": "Clean input",
+      "input": "a = 1;\n",
+      "expected": "0 errors",
+      "hidden": false
+    },
+    {
+      "name": "One error",
+      "input": "a = $;\n",
+      "expected": "line 1, column 5: unexpected $\n1 errors",
+      "hidden": false
+    },
+    {
+      "name": "On a later line",
+      "input": "a;\n  #\n",
+      "expected": "line 2, column 3: unexpected #\n1 errors",
+      "hidden": true
+    },
+    {
+      "name": "Errors in a row",
+      "input": "$$",
+      "expected": "line 1, column 1: unexpected $\nline 1, column 2: unexpected $\n2 errors",
+      "hidden": true
+    },
+    {
+      "name": "Empty input",
+      "input": "",
+      "expected": "0 errors",
+      "hidden": true
+    },
+    {
+      "name": "After a long name",
+      "input": "abcdef ?",
+      "expected": "line 1, column 8: unexpected ?\n1 errors",
+      "hidden": true
+    }
+  ],
+  "hints": [
+    "Keep a column variable. Every rule adds yyleng to it, and the newline rule sets it back to 1.",
+    "%option yylineno makes flex count lines for you, but you can also count them in the newline rule.",
+    "Panic-mode recovery here is simply to report the bad character and keep scanning. The scanner never has to stop."
+  ],
+  "explanation": "A catch-all . rule at the bottom only fires for characters no other rule wants, which makes it the natural place to report errors. Because each rule updates the column before the next one runs, every error knows exactly where it is. This is panic-mode recovery in its simplest form."
+}

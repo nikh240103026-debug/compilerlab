@@ -12,6 +12,9 @@ import { defineConfig } from 'vite';
 // Gemini key cannot reach client code.
 const serverPort = Number(process.env.PORT) || 4317;
 const webPort = Number(process.env.WEB_PORT) || 5173;
+const monacoRoot = fileURLToPath(
+  new URL('../../node_modules/monaco-editor/esm/vs', import.meta.url),
+);
 
 export default defineConfig({
   plugins: [
@@ -28,7 +31,15 @@ export default defineConfig({
   ],
   worker: { format: 'es' },
   resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    alias: [
+      { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+      // The vim and emacs key bindings import Monaco by paths its current package map no longer
+      // offers, and by its full entry. These point them at the same copy the editor uses.
+      { find: /^monaco-editor\/esm\/vs\/(.*)$/, replacement: `${monacoRoot}/$1.js` },
+      { find: /^monaco-editor$/, replacement: `${monacoRoot}/editor/editor.api.js` },
+      // The package map can only name .js files, and the editor needs one stylesheet directly.
+      { find: /^monaco-editor\/(.+\.css)$/, replacement: `${monacoRoot}/$1` },
+    ],
   },
   server: {
     host: '127.0.0.1',

@@ -1,0 +1,45 @@
+{
+  "id": "character-classes",
+  "module": "lexical-analysis",
+  "topics": ["regular-expressions", "lex-and-flex"],
+  "order": 3,
+  "title": "Character classes",
+  "difficulty": "easy",
+  "tags": ["character classes", "rule order"],
+  "exams": ["university"],
+  "brief": "Count vowels, consonants, digits and everything else, in upper or lower case. Print one line in exactly this form: vowels=2 consonants=3 digits=1 other=1",
+  "pipeline": "lex",
+  "stdin": "Hello World 42!\n",
+  "tests": [
+    {
+      "name": "A short word",
+      "input": "cab1!",
+      "expected": "vowels=1 consonants=2 digits=1 other=1",
+      "hidden": false
+    },
+    {
+      "name": "Capital letters",
+      "input": "AEIOU xyz",
+      "expected": "vowels=5 consonants=3 digits=0 other=1",
+      "hidden": false
+    },
+    {
+      "name": "Empty input",
+      "input": "",
+      "expected": "vowels=0 consonants=0 digits=0 other=0",
+      "hidden": true
+    },
+    {
+      "name": "Newlines count as other",
+      "input": "a\nb\n",
+      "expected": "vowels=1 consonants=1 digits=0 other=2",
+      "hidden": true
+    }
+  ],
+  "hints": [
+    "[a-zA-Z] matches vowels too. When two rules match the same length, the earlier one wins.",
+    "So put the vowel rule first, and the general letter rule after it.",
+    "To catch everything else, including newlines, write .|\\n as the last rule."
+  ],
+  "explanation": "Every pattern here matches exactly one character, so all the matches are the same length and rule order decides. The vowel rule has to come before [a-zA-Z], or vowels would be counted as consonants."
+}
