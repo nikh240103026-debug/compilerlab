@@ -417,13 +417,11 @@ test.describe('free practice', () => {
       await openExercise(page, 'practice');
       await page.locator('[data-testid=code-editor] .view-lines').click();
       await page.waitForTimeout(800);
+      // Start of the file first, so only a real Emacs Ctrl+E can put the text at the end of the line.
+      await page.keyboard.press('Control+Home');
       await page.keyboard.press('Control+E');
-      await page.keyboard.insertText('MARKER_AT_END');
-      const firstLine = page.locator('[data-testid=code-editor] .view-line').first();
-      await expect(page.locator('[data-testid=code-editor] .view-lines')).toContainText(
-        'MARKER_AT_END',
-      );
-      expect(await firstLine.count()).toBe(1);
+      await page.keyboard.insertText('MARKER');
+      await expect(page.locator('[data-testid=code-editor] .view-lines')).toContainText('%{MARKER');
       expect(problems).toEqual([]);
     } finally {
       await page.request.patch('/api/settings', { data: { editorKeymap: 'default' } });
