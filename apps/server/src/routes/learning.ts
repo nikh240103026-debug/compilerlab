@@ -9,6 +9,7 @@ import {
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { AppConfig } from '../config';
 import type { SqlDatabase } from '../db/driver';
+import { logProgressActivity } from '../learner/activity';
 import { readAllProgress, updateProgress } from '../progress-repo';
 
 export function registerLearningRoutes(
@@ -47,6 +48,9 @@ export function registerLearningRoutes(
     const patch = TopicProgressPatchSchema.parse(request.body);
     const lesson = lessonIndex().lessons.find(({ id }) => id === request.params.id);
     if (!lesson) return notFound(reply);
-    return updateProgress(db, lesson.id, patch);
+    const before = readAllProgress(db).find((item) => item.topicId === lesson.id);
+    const updated = updateProgress(db, lesson.id, patch);
+    logProgressActivity(db, lesson.id, before, patch);
+    return updated;
   });
 }

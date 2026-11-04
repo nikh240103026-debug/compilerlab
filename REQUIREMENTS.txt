@@ -1,0 +1,130 @@
+COMPILERLAB: WHAT YOU NEED TO DO BY HAND
+=========================================
+
+THIS IS AN UNFINISHED SNAPSHOT (4 November 2026). Read section 6 first.
+The new code compiles and builds, but none of it has ever been run.
+
+
+1. REQUIRED DOWNLOADS
+---------------------
+Node.js 22 LTS (version 22.22.2 or newer, but below 23)
+  Windows:      winget install --id CoreyButler.NVMforWindows -e
+                nvm install 22
+                nvm use 22
+  macOS/Linux:  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+                nvm install        (reads .nvmrc in the project folder)
+                nvm use
+  npm comes with Node. Newer Node versions get a warning. Older ones cannot run.
+
+A browser: Chrome, Edge or Firefox.
+
+Windows only: unzip to a short path such as C:\compilerlab. Some paths are long, and a deep
+folder can cause "Filename too long" errors.
+
+
+2. START THE APP
+----------------
+In the compilerlab folder:
+
+  npm run setup     Installs everything and checks your computer. Needs internet the first time.
+  npm start         Starts the app and opens http://127.0.0.1:5173
+
+Other commands:
+
+  npm run doctor    Checks Node, SQLite, the lab tools and the Gemini key, with exact fixes
+  npm run build     Then: npm run start:prod    Runs the built app on one port, http://127.0.0.1:4317
+  npm run backup    Backs up your data
+  npm run reset     Deletes your data but keeps backups
+
+
+3. KEYS AND SETTINGS (.env file)
+--------------------------------
+The .env file is included, with every value blank. A blank value uses the default below.
+Only GEMINI_API_KEY needs filling in, and only if you want AI features.
+
+  GEMINI_API_KEY              Blank by default. Get a key at https://aistudio.google.com/apikey
+                              Without it, AI features show an offline state and everything
+                              else still works. The key stays on the local server.
+  GEMINI_MODEL                Default: gemini-3.5-flash-lite
+                              Not confirmed: no real AI call has ever been made. If you get a
+                              model error, pick a current one from
+                              https://aistudio.google.com/docs/models
+  GEMINI_REQUESTS_PER_MINUTE  Default: 10. A cautious guess. Set it to your real limit.
+  GEMINI_REQUESTS_PER_DAY     Default: 250. A cautious guess. Set it to your real limit.
+  PORT                        Default: 4317. The local server.
+  WEB_PORT                    Default: 5173. The web page during development.
+  LOG_LEVEL                   Default: warn.
+
+  Optional, and commented out in the file:
+  COMPILERLAB_DATA_DIR        Default: ./data
+  SQLITE_DRIVER               Set to node:sqlite if better-sqlite3 will not load.
+
+Restart the app after changing .env. Never commit or share a .env holding a real key.
+
+
+4. OPTIONAL DOWNLOADS: THE REAL LAB TOOLS (flex, bison, gcc, g++, make)
+-----------------------------------------------------------------------
+Without them, Lex programs run in a built-in engine labeled "Simulated", and C and C++ programs
+show install commands instead.
+
+  Windows, MSYS2:  winget install --id MSYS2.MSYS2 -e
+                   In the "MSYS2 UCRT64" terminal:
+                   pacman -S --needed flex bison make mingw-w64-ucrt-x86_64-gcc
+                   Add C:\msys64\ucrt64\bin and C:\msys64\usr\bin to PATH, or set the
+                   tool paths in the app's Settings page.
+  Windows, WSL2:   wsl --install -d Ubuntu
+                   Then run all of CompilerLab inside Ubuntu, using the Ubuntu line below.
+  macOS:           xcode-select --install
+                   brew install flex bison
+                   Add to ~/.zshrc:
+                   export PATH="$(brew --prefix)/opt/bison/bin:$(brew --prefix)/opt/flex/bin:$PATH"
+  Ubuntu:          sudo apt update && sudo apt install -y flex bison gcc g++ make
+
+Then run: npm run doctor
+
+
+5. TESTING (ALL LEFT TO YOU)
+----------------------------
+  npm run check                     Lint, type checks, unit tests and build
+  npx vitest run real-tools         Runs exercise solutions through real flex and gcc.
+                                    These skip themselves if the tools are missing.
+  npx playwright install chromium   Once, for browser tests
+  npm run build                     Browser tests use the built app, so build first
+  npm run test:e2e                  Browser tests
+
+Expect failures on this snapshot. Nothing above has been run since the new code was added, so
+formatting checks and older tests may fail. New code since Milestone 3 has no tests at all, even
+though the spec requires engine tests against textbook answers. Points to check against the book
+are listed in docs/CONTENT_REVIEW.md.
+
+
+6. WHAT IS AND IS NOT IN THIS SNAPSHOT
+--------------------------------------
+Tested on one Windows machine (Milestones 1 to 3):
+  Foundation, regex and automata engine, 8 visualizers, lessons for Modules 0 and 1, the lab with
+  10 Module 1 exercises. Real flex, gcc and g++ have still never been run. macOS, Linux and
+  browsers other than Edge have not been tried.
+
+Written and connected, but never run:
+  - AI layer: tutor page, lesson panel, Ctrl+K palette, lab help. No real Gemini call yet.
+  - Grammar and parsing engine, and its 8 Module 2 visualizers.
+  - 3 Module 3 visualizers: annotated parse tree, dependency graph, scope stack.
+
+Written, but no page uses them yet, so you cannot see them in the app:
+  - Semantic and IR engines (beyond the 3 visualizers above).
+  - Optimizer, data-flow, code generation, VM, runtime models and the TinyC compiler.
+
+Partly written and not usable:
+  - Assessment: server routes and grading exist, but there are no pages. /practice still shows
+    its "planned" page.
+  - Learner features: server code only, and not connected. No glossary page yet.
+
+Not started:
+  - Lex + Yacc pipeline, Simulated Yacc and the conflict explorer.
+  - The other visualizers for Modules 3 to 7, and all 3D scenes.
+  - Capstone, mini-projects, instructor mode, exports, LAN mode, branding and i18n.
+  - Exam prep center, new dashboard, onboarding, notes and search pages.
+  - Lessons, quizzes and labs for Modules 2 to 8. Content so far: 14 of about 68 topics, 14
+    question banks and 10 lab exercises, against targets of 600+ questions and 60+ exercises.
+
+Git: main holds Milestones 1 to 3. Everything newer is uncommitted on the complete-project branch.

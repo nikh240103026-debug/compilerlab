@@ -1,0 +1,145 @@
+[
+  {
+    "id": "gate-cs",
+    "name": "GATE Computer Science: Compiler Design",
+    "kind": "exam",
+    "note": "Based on the Compiler Design section of the GATE CS syllabus. It can change from year to year, so check it against the official syllabus for your exam year.",
+    "items": [
+      { "id": "lexical-analysis", "title": "Lexical analysis", "module": "lexical-analysis" },
+      { "id": "parsing", "title": "Parsing", "module": "syntax-analysis" },
+      {
+        "id": "sdt",
+        "title": "Syntax-directed translation",
+        "module": "semantic-analysis",
+        "match": ["syntax-directed", "sdd", "sdt", "attribut", "dependency"]
+      },
+      {
+        "id": "runtime",
+        "title": "Runtime environments",
+        "module": "runtime-environments",
+        "match": ["storage", "activation", "stack", "heap", "parameter", "access", "garbage"]
+      },
+      { "id": "icg", "title": "Intermediate code generation", "module": "intermediate-code" },
+      {
+        "id": "local-opt",
+        "title": "Local optimisation",
+        "module": "code-optimization",
+        "match": ["basic-block", "basic block", "local", "peephole"]
+      },
+      {
+        "id": "dataflow",
+        "title": "Data flow analyses: constant propagation, liveness, common subexpression elimination",
+        "module": "code-optimization",
+        "match": [
+          "data-flow",
+          "dataflow",
+          "liveness",
+          "live",
+          "constant",
+          "subexpression",
+          "global"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "university-five-unit",
+    "name": "University: five-unit theory course",
+    "kind": "university",
+    "note": "A typical end-semester outline, not any one university's official syllabus. Compare it with yours, or tick your own topics under Custom.",
+    "items": [
+      {
+        "id": "unit-1-intro",
+        "title": "Unit 1: Introduction and the phases of a compiler",
+        "module": "foundations"
+      },
+      {
+        "id": "unit-1-lexical",
+        "title": "Unit 1: Lexical analysis and Lex",
+        "module": "lexical-analysis"
+      },
+      {
+        "id": "unit-2-topdown",
+        "title": "Unit 2: Grammars and top-down parsing",
+        "module": "syntax-analysis",
+        "match": [
+          "grammar",
+          "ambigu",
+          "transform",
+          "recursive",
+          "top-down",
+          "first",
+          "follow",
+          "ll",
+          "derivation"
+        ]
+      },
+      {
+        "id": "unit-2-bottomup",
+        "title": "Unit 2: Bottom-up parsing, LR parsers and Yacc",
+        "module": "syntax-analysis",
+        "match": [
+          "bottom-up",
+          "shift",
+          "precedence",
+          "lr",
+          "slr",
+          "lalr",
+          "clr",
+          "yacc",
+          "bison",
+          "handle"
+        ]
+      },
+      {
+        "id": "unit-3-sdd",
+        "title": "Unit 3: Syntax-directed translation and type checking",
+        "module": "semantic-analysis"
+      },
+      {
+        "id": "unit-3-icg",
+        "title": "Unit 3: Intermediate code generation",
+        "module": "intermediate-code"
+      },
+      {
+        "id": "unit-4-runtime",
+        "title": "Unit 4: Runtime environments",
+        "module": "runtime-environments"
+      },
+      { "id": "unit-4-codegen", "title": "Unit 4: Code generation", "module": "code-generation" },
+      { "id": "unit-5-opt", "title": "Unit 5: Code optimization", "module": "code-optimization" }
+    ]
+  },
+  {
+    "id": "university-dragon-book",
+    "name": "University: Dragon Book course with lab",
+    "kind": "university",
+    "note": "The order of a course that follows Aho, Lam, Sethi and Ullman chapter by chapter, with lab work in Lex and Yacc. It is a typical outline, so compare it with your course's own list.",
+    "items": [
+      { "id": "ch1-intro", "title": "Chapter 1: Introduction", "module": "foundations" },
+      { "id": "ch3-lexical", "title": "Chapter 3: Lexical analysis", "module": "lexical-analysis" },
+      { "id": "ch4-syntax", "title": "Chapter 4: Syntax analysis", "module": "syntax-analysis" },
+      {
+        "id": "ch5-sdt",
+        "title": "Chapter 5: Syntax-directed translation",
+        "module": "semantic-analysis"
+      },
+      {
+        "id": "ch6-icg",
+        "title": "Chapter 6: Intermediate-code generation",
+        "module": "intermediate-code"
+      },
+      {
+        "id": "ch7-runtime",
+        "title": "Chapter 7: Run-time environments",
+        "module": "runtime-environments"
+      },
+      { "id": "ch8-codegen", "title": "Chapter 8: Code generation", "module": "code-generation" },
+      {
+        "id": "ch9-opt",
+        "title": "Chapter 9: Machine-independent optimizations",
+        "module": "code-optimization"
+      }
+    ]
+  }
+]

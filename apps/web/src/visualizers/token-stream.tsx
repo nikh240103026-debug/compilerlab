@@ -8,6 +8,7 @@ import {
 } from '@compilerlab/engine';
 import { useCallback, useId, useMemo, useState } from 'react';
 import { TriangleAlert } from 'lucide-react';
+import { useAiVisualizerInput } from '@/ai/context-store';
 import { useDebouncedValue, useEngineJob } from './engine/use-engine';
 import type { JobOutput } from './engine/jobs';
 import { Player } from './player/player';
@@ -271,6 +272,7 @@ export default function TokenStream({ initial, onUsed }: VisualizerProps) {
     [settledSpec, settledSource],
   );
   const { data } = useEngineJob('lexer', input);
+  useAiVisualizerInput(`Lexer rules:\n${settledSpec}\n\nSource code:\n${settledSource}`);
   const rulesId = useId();
   const sourceId = useId();
 

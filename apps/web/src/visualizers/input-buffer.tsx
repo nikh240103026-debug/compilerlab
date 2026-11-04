@@ -7,6 +7,7 @@ import {
 } from '@compilerlab/engine';
 import { useCallback, useId, useState } from 'react';
 import { Input, NativeSelect } from '@/components/ui/field';
+import { useAiVisualizerInput } from '@/ai/context-store';
 import { useDebouncedValue, useEngineJob } from './engine/use-engine';
 import { Player } from './player/player';
 import { JobResult, type VisualizerProps } from './shared';
@@ -122,6 +123,7 @@ export default function InputBuffer({ initial, onUsed }: VisualizerProps) {
   const [size, setSize] = useState(Number(initial?.size) || 8);
   const settled = useDebouncedValue(text);
   const { data } = useEngineJob('inputBuffer', { text: settled, size });
+  useAiVisualizerInput(settled);
   const textId = useId();
   const sizeId = useId();
 

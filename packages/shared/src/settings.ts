@@ -30,6 +30,8 @@ export const SettingsSchema = z.strictObject({
     .regex(/^[\w.-]*$/, 'Use only the model id, for example gemini-3.5-flash-lite.'),
   /** Empty means "find the tool on PATH". */
   toolPaths: ToolPathsSchema,
+  /** Whether the dashboard shows XP, levels and badges. */
+  gamification: z.boolean(),
 });
 
 export const SettingsPatchSchema = SettingsSchema.partial().extend({

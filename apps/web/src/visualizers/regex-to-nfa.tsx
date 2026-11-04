@@ -6,6 +6,7 @@ import {
   type TraceStep,
 } from '@compilerlab/engine';
 import { useCallback, useMemo, useState } from 'react';
+import { useAiVisualizerInput } from '@/ai/context-store';
 import { useDebouncedValue, useEngineJob } from './engine/use-engine';
 import {
   AutomatonGraph,
@@ -101,6 +102,7 @@ export default function RegexToNfa({ initial, onUsed }: VisualizerProps) {
   const [regex, setRegex] = useState(initial?.regex ?? '(a|b)*abb');
   const settled = useDebouncedValue(regex);
   const { data } = useEngineJob('thompson', { regex: settled });
+  useAiVisualizerInput(settled);
 
   return (
     <div className="space-y-3">

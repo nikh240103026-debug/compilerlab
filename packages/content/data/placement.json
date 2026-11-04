@@ -1,0 +1,96 @@
+[
+  {
+    "id": "place-foundations",
+    "module": "foundations",
+    "prompt": "What is the main difference between a compiler and an interpreter?",
+    "options": [
+      "A compiler produces a target program to run later, while an interpreter executes the source directly",
+      "A compiler only works on C, while an interpreter works on any language",
+      "An interpreter finds syntax errors, while a compiler does not",
+      "A compiler always runs slower than an interpreter"
+    ],
+    "answer": 0,
+    "explanation": "A compiler translates the whole program ahead of time. An interpreter carries out the program's statements itself, without producing a separate target program."
+  },
+  {
+    "id": "place-lexical",
+    "module": "lexical-analysis",
+    "prompt": "In the statement count = 10; which of these is a lexeme?",
+    "options": [
+      "The token name id",
+      "The characters count",
+      "The pattern letter (letter | digit)*",
+      "The parse tree of the statement"
+    ],
+    "answer": 1,
+    "explanation": "A lexeme is the actual text in the source. The token name and the pattern describe it, but they are not the text itself."
+  },
+  {
+    "id": "place-syntax",
+    "module": "syntax-analysis",
+    "prompt": "Why can a grammar with the production E → E + T not be used directly by an LL(1) parser?",
+    "options": [
+      "It has too many terminals",
+      "It is left-recursive, so a top-down parser could expand E forever without reading any input",
+      "The + operator cannot appear in a grammar",
+      "LL(1) parsers only accept regular languages"
+    ],
+    "answer": 1,
+    "explanation": "The nonterminal E begins its own body. Predicting that production never consumes a token, so left recursion has to be removed first."
+  },
+  {
+    "id": "place-semantic",
+    "module": "semantic-analysis",
+    "prompt": "Which attribute is computed only from a node's children in a parse tree?",
+    "options": ["An inherited attribute", "A synthesized attribute", "A terminal", "A lexeme"],
+    "answer": 1,
+    "explanation": "Synthesized attributes flow up the tree from the children. Inherited attributes come from the parent and siblings."
+  },
+  {
+    "id": "place-intermediate",
+    "module": "intermediate-code",
+    "prompt": "How many operators can appear on the right side of a three-address instruction?",
+    "options": ["At most one", "Exactly two", "As many as the expression needs", "None"],
+    "answer": 0,
+    "explanation": "That limit is what forces a long expression into a sequence of simple steps using temporaries."
+  },
+  {
+    "id": "place-optimization",
+    "module": "code-optimization",
+    "prompt": "Live variable analysis is usually solved by working in which direction over the flow graph?",
+    "options": [
+      "Forward, from the entry block",
+      "Backward, from the exit block",
+      "It has no direction",
+      "Only inside one basic block"
+    ],
+    "answer": 1,
+    "explanation": "Whether a variable is live depends on how it may be used later, so information flows backward: IN[B] = use[B] ∪ (OUT[B] − def[B])."
+  },
+  {
+    "id": "place-codegen",
+    "module": "code-generation",
+    "prompt": "In graph coloring register allocation, what does an edge between two variables mean?",
+    "options": [
+      "One is assigned from the other",
+      "They are used in the same expression",
+      "They are live at the same time, so they cannot share a register",
+      "They have the same type"
+    ],
+    "answer": 2,
+    "explanation": "An edge in the interference graph means the two values must exist at once, so they need different registers, which are the colors."
+  },
+  {
+    "id": "place-runtime",
+    "module": "runtime-environments",
+    "prompt": "What is an activation record used for?",
+    "options": [
+      "Storing the information for one call of a procedure",
+      "Recording which lessons a student has read",
+      "Holding the compiler's symbol table",
+      "Listing the tokens of a program"
+    ],
+    "answer": 0,
+    "explanation": "Each call gets its own record, which holds its locals, parameters, saved state and return address. That is what makes recursion work."
+  }
+]

@@ -5,10 +5,13 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./ai": "./src/ai.ts",
+    "./assessment": "./src/assessment.ts",
     "./constants": "./src/constants.ts",
     "./settings-patch": "./src/settings-patch.ts",
     "./progress": "./src/progress.ts",
-    "./lab": "./src/lab.ts"
+    "./lab": "./src/lab.ts",
+    "./learner": "./src/learner.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

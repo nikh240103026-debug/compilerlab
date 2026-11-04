@@ -23,7 +23,13 @@ function Explanation({ question, outcome }: { question: PracticeProblem; outcome
           variant="ghost"
           className="mt-1 -ml-2"
           onClick={() =>
-            void askAi(`I got this question wrong: "${question.prompt}" Can you explain it?`)
+            void askAi(`I got this question wrong: "${question.prompt}" Can you explain it?`, {
+              quiz: {
+                question: question.prompt,
+                ...(question.type === 'mcq' ? { options: question.options } : {}),
+                correctAnswer: question.solution,
+              },
+            })
           }
         >
           <Sparkles aria-hidden="true" />

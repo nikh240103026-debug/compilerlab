@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { RotateCw, Unplug } from 'lucide-react';
 import { useEffect } from 'react';
 import { Outlet, useNavigation } from 'react-router';
+import { CommandPaletteHost } from '@/ai/command-palette-host';
 import { Toaster } from '@/components/toaster';
 import { Button } from '@/components/ui/button';
 import { useMediaQuery } from '@/hooks/use-media-query';
@@ -76,6 +77,7 @@ export function AppShell() {
         </main>
       </div>
       <Toaster />
+      <CommandPaletteHost />
       <RouteEffects />
     </div>
   );

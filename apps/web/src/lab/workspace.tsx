@@ -18,6 +18,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { ClipboardCheck, Eye, Play, Square } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useLabAiContext } from '@/ai/lab-context';
+import type { LabHelpRequest } from '@/ai/lab-help';
 import { LabModeBadge } from '@/components/system-status';
 import { SplitPane } from '@/components/split-pane';
 import { Button } from '@/components/ui/button';
@@ -35,6 +37,7 @@ import type { TerminalHandle } from './terminal-pane';
 
 // Monaco and xterm are big, so they load with the workspace and never with the app.
 const CodeEditor = lazy(() => import('./code-editor'));
+const LabHelp = lazy(() => import('@/ai/lab-help'));
 
 const SAVE_DELAY_MS = 600;
 const TOOLBAR_SELECT = 'h-8 w-auto py-0 pr-7 pl-2 text-xs';
@@ -146,6 +149,22 @@ export function Workspace({ id, title, exercise, initial }: WorkspaceProps) {
 
   const { state: run, start, stop } = useLabRun(onEvent);
   const running = run.status === 'running';
+
+  // Every AI call from this page can see the files and the last run.
+  useLabAiContext({ exercise, files, stdin, pipeline, activeFile, run });
+  const [helpRequest, setHelpRequest] = useState<LabHelpRequest | null>(null);
+  const explainInHelp = useCallback((question: string) => {
+    setHelpRequest((current) => ({ id: (current?.id ?? 0) + 1, question }));
+    setTab('ai');
+  }, []);
+  const replaceFile = useCallback((name: string, content: string) => {
+    setFiles((current) =>
+      current.some((file) => file.name === name)
+        ? current.map((file) => (file.name === name ? { ...file, content } : file))
+        : [...current, { name, content }],
+    );
+    setActiveFile(name);
+  }, []);
 
   const buildJob = useCallback(
     (): LabJob => ({
@@ -390,6 +409,19 @@ export function Workspace({ id, title, exercise, initial }: WorkspaceProps) {
                   terminalRef={terminal}
                   fontSize={Math.max(12, settings.fontSize - 2)}
                   onGoToLine={goToLine}
+                  onExplain={explainInHelp}
+                  aiHelp={
+                    <Suspense fallback={<Skeleton className="m-2 h-24" />}>
+                      <LabHelp
+                        run={run}
+                        files={files}
+                        exercise={exercise}
+                        request={helpRequest}
+                        onReplaceFile={replaceFile}
+                        onUseStdin={setStdin}
+                      />
+                    </Suspense>
+                  }
                 />
               }
             />

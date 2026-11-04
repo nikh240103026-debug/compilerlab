@@ -232,3 +232,171 @@ Part 1 allows no network calls, so Monaco never loads from a CDN. `apps/web/src/
 | `@xterm/xterm`, `@xterm/addon-fit` | Named in Part 2. The addon sizes the terminal to its pane.                                       |
 | `@fastify/websocket`               | Part 2 requires WebSocket streaming, and this is Fastify's own plugin. Pure JavaScript.          |
 | `monaco-vim`, `monaco-emacs`       | Settings has offered these key bindings since Milestone 1. Loaded only by those who choose them. |
+
+## Milestone 4
+
+### Nothing in this milestone has been run
+
+This was written from the installed package's types and source, and only the type checker has been run on it. The first real Gemini call is still to come. The default model's free-tier availability, which Milestone 1 asked to check here, is therefore **still not confirmed**.
+
+### The free-tier limits are cautious guesses
+
+Google's documentation no longer lists free-tier limits per model. They appear only at <https://aistudio.google.com/rate-limit> when signed in. So the defaults are a guess: 10 requests a minute and 250 a day, which `GEMINI_REQUESTS_PER_MINUTE` and `GEMINI_REQUESTS_PER_DAY` change. The minute limit is enforced, because going over it only earns errors. The day limit is only a hint, because a wrong guess there would stop a student who still has quota. Gemini says itself when a day's quota has run out, and the tutor then says so too.
+
+### Retries live in one place
+
+The SDK has its own retry option, and it is left off, so the SDK makes one attempt per call. `queue.ts` does the retrying, because it also has to count each attempt against the limit, pause other requests after a 429, respect Gemini's `retryDelay`, and tell the student why they are waiting. A wait longer than 45 seconds is reported rather than sat through. A stream only retries before its first word, because a student cannot unread an answer.
+
+### Chat streams over POST
+
+`EventSource` can only send GET, and a question with its context does not fit in a URL. So the browser reads the server-sent events from a `fetch` body. Cancellation follows the response's `close` event, not the request's, which fires as soon as the body has been read.
+
+### What the cache keeps
+
+The key is a hash of the model and the whole prompt, including the context, and answers stay for 30 days, up to 2000 of them. A saved answer is served even with no key or no internet, because it costs nothing. A cut-off answer is shown but not saved. "Ask again" skips the cache, so a student is never stuck with a bad answer.
+
+### Structured output is checked twice
+
+The model gets the JSON schema as `responseJsonSchema`, and Zod has the last word. Gemini documents support for only some JSON Schema keywords, so `json-reply.ts` removes the others, such as `pattern` and `minLength`. If a model refuses the schema parameter outright, the schema is written into the prompt instead. Marks and totals are added up by the server, not trusted from the model.
+
+### Fix suggestions are find-and-replace edits
+
+A whole replacement file would be simpler to apply, but the context may shorten a large file, and accepting a file rewritten from a shortened copy would lose the student's code. So each edit quotes the exact text it changes. The server rejects a quote that is not in a complete file, and the browser checks again when the student accepts, in case the code has changed. Accepting replaces the editor's text, which clears Monaco's undo history, so each accepted edit has its own Undo.
+
+### Hints mode is enforced on the server
+
+In Socratic mode the model is asked for hints only, and the server also empties any edits it sends. The Socratic setting defaults to on.
+
+### The reference solution stays on the server
+
+The browser only sends an exercise's id, and the server adds the solution to the prompt, with the instruction not to reveal it. A reply that quotes a long line of the solution, other than one the student already has, counts as invalid and is sent back. **This only catches word-for-word quoting.** A model could still describe a solution too closely, which is why the docs do not call it secure. It fits the Milestone 3 decision: the goal is to keep answers from being one glance away, and a determined student can read the files anyway.
+
+### The engine decides, and the AI explains
+
+The grammar and automata checker sends the engine's verdict as input and shows it as the engine's. The AI's output has no verdict field at all, so a wrong explanation can never change a result. "Predict the next step" works the same way: the AI compares the guess with the engine's real next step. Both still work without a key: the verdict still shows, and a student can reveal the next step and compare it themselves.
+
+### Context is registered as functions
+
+A page registers a function that returns what it knows, and the function is only called when a question is sent. Pushing a value on each change would mean copying every lab file on every keystroke. Ask AI buttons elsewhere send the context along when they navigate to the tutor, because the page holding it is about to close.
+
+### Where the Ask AI button sits
+
+The panel floats, as Part 8 asks, but its button sits in the lesson's bottom bar rather than floating too. A floating button would cover a visualizer's controls in the right-hand pane. Keyboard users get the same selection actions inside the panel, because the toolbar beside a selection is hard to reach by keyboard.
+
+### Images are removed from AI answers
+
+An image in Markdown is a network request. The production content security policy would block it, but development has no such policy, and Part 1 allows no call except to Gemini. Links stay, because following one is the student's own choice.
+
+### Ctrl+K works inside the editor, with one exception
+
+Monaco uses Ctrl+K to begin its own shortcuts and stops the event, so the palette listens in the capture phase. In Vim and Emacs key bindings, Ctrl+K already means something, so there the editor keeps it, and the top bar's button still opens the palette.
+
+### Dependencies added in this milestone
+
+| Package          | Justification                                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `@google/genai`  | Named in Part 2 as the official SDK. Server only, and loaded on the first AI request so it never slows a cold start.            |
+| `minisearch`     | Named in Part 8 for local retrieval. Small, pure JavaScript, no dependencies, and the index lives in memory.                    |
+| `react-markdown` | Renders AI answers without ever rendering raw HTML from the model. Pure JavaScript, in a lazy chunk outside the initial bundle. |
+
+`remark-gfm`, already installed to compile lessons, also runs in that lazy chunk, so tables in answers render.
+
+## Milestone 5: grammar and parsing engine
+
+### Nothing here has been run
+
+Only the type checker has seen this code, and by the brief for this milestone no tests were written. The textbook's answers were traced by hand through the code: 12 LR(0) states for the expression grammar, and 10 LR(1) and 7 LALR states for `S → C C`. Those still need real unit tests against the book's figures, which Part 1 requires.
+
+### The grammar format
+
+Letters and digits stick together, while brackets and operators split on their own, so `(E)+id` reads as five symbols and `aSb` reads as one. That is the usual convention for identifiers, and a warning points out a symbol like `aSb` that was probably meant as three. An empty alternative is an error rather than a silent ε, because `A -> a |` is far more often a typo than a choice. A production written twice is dropped with a warning, since a copy would show up as a false conflict and a false ambiguity.
+
+### LALR is built by merging canonical LR(1) states
+
+This is the book's simple method. Propagating lookaheads through LR(0) kernels is much faster, but merging shows students exactly which states combined, and gives the book's labels such as `36` and `47`. The cost is a limit: a grammar needing over 3,000 canonical states is refused with a readable error, even though its LALR table would be small. Mini-Yacc and the bison explorer inherit this limit. If real grammars hit it, the fix is to add the kernel algorithm as a second path that gives the same table.
+
+### Backtracking is a full search
+
+Recursive descent here returns to the most recent choice even if that nonterminal already succeeded once, so it finds a parse whenever one exists. Trying alternatives only inside the failing procedure would reject sentences that are in the language, for example `S → A a`, `A → a a | a` on `a a`, which is a poor first impression of the technique. The moves are bounded because the search can take exponential time, and left recursion is refused up front because it would never return.
+
+### Error recovery is automatic
+
+The book's phrase-level recovery uses error routines written by hand for one table. A teaching tool takes any grammar, so this uses one policy for all of them: insert a terminal if shifting it would let the current token be accepted, and otherwise delete the current token. Panic mode likewise takes the nearest nonterminal that lets parsing resume, rather than one a person chose. A guard forces input to be consumed if recovery repeats at one spot, so it cannot loop.
+
+### A general parser sits behind the derivation and ambiguity views
+
+Those two visualizers have to accept any grammar, including ones no LL or LR table can handle, so `grammarChartParse` works out which nonterminals derive each span of the input. It keeps up to two derivations per entry, which is enough to say exactly whether one sentence is ambiguous. That answer is exact for that sentence, unlike the bounded search over all sentences, and the UI keeps the two apart.
+
+### Small additions beyond the request
+
+- **An LR(0) table kind,** because Module 2 teaches it and it needs only one more rule.
+- **Precedence options on the LR table builder,** because the Yacc work next needs `%left` and `%right` to settle conflicts the way Bison does.
+- **`/visualize/:id` reads its query string as `initial`,** so the conflict explorer can use a plain link.
+
+### Left out
+
+Operator-precedence functions (the `f` and `g` encoding of the table) are not built. The table and the parser are.
+
+## Milestone 7: semantic analysis and intermediate code
+
+### Nothing here has been run
+
+Only the type checker has seen this code, and by the brief for this milestone no tests were written. These book examples were traced by hand through the code, and they still need real unit tests, which Part 1 requires: `a = b*-c + b*-c` for three-address code, triples and the DAG, `c + a[i][j]` for array widths, `if (x < 100 || x > 200 && x != y) x = 0;` for labels, `a < b or c < d and e < f` for backpatching, `3 * 5 + 4 n` for the desk calculator SDD, the `length` function for inference, and the `flag` example for SSA.
+
+### A comparison in a jump goes through a temporary
+
+The shared `TacInstr` has a conditional jump that tests one operand, and the optimizer and code generator already depend on that shape. So the book's `if x < 100 goto L2` becomes `t1 = x < 100` and then `if t1 goto L2`. Labels and jumps are otherwise the book's, but block sizes and temporary numbers differ from its figures, and a lesson that shows `irToTac` output next to a figure should say so. `irBackpatch` has its own instruction type and prints the book's one-instruction form.
+
+### Next labels exist only where something jumps to them
+
+The book's scheme gives every statement a next label. That would put a label after each assignment, so straight-line code would not look like the book's own examples. A statement gets one only if it can jump to it. In the book's `if` example, the labels still come out as L1 to L4, in the book's order.
+
+### Translation schemes run over a finished parse tree
+
+`sdtRun` parses first, then plays an LL or LR parser's moves over the tree. This is the general method of section 5.4.3, and it lets a student run any scheme, including ones a real parser could not handle. `sdtAnalyze` warns about those, such as an action at the left edge of a left-recursive production. The trace is therefore a simulation, not a table-driven parser. A real LR parser could not reach an inherited attribute as simply as this one does.
+
+### The SDD format has its own small parser
+
+`grammarChartParse` in the grammar folder is also a general parser. The SDD format needs different rules for its symbols, though. E1 is an occurrence of E, digit matches any number token, actions can sit inside a body, and how the input is split depends on the grammar's terminals. So `sdd-parse.ts` has its own Earley chart, and the two could be joined later.
+
+### The mini-language is stricter than C
+
+A condition must be `bool`, `&&` needs `bool` on both sides, and narrowing is an error on assignment, as in the book's rules. This gives the stepper clear errors to show. A C-like rule that treats any int as true would hide most of them. There is no pointer arithmetic, `->` or casts.
+
+### Inference has its own small language
+
+The book's inference example is functional, and a C-like language gives inference little to do. So `typeInfer` takes `fun`, `let`, `fn` and `if`, with `null`, `tl`, `hd`, `cons` and `nil` predefined. `+` works only on `int`, because the book's example has no overloading, and overloading would make the types ambiguous. Inference stops at the first type error, because later types depend on the failed one.
+
+### DAG rows for assignments are never shared
+
+A table holds each variable's current value number, so reading a variable after assigning to it gets the new value, and the DAG stays correct over a whole block. Assignments always get their own row, because `a = x; a = y; a = x` must end with the third one. `b + c` and `c + b` are separate nodes, as in the book's value-number method, since commutativity is an optimization, not part of the construction.
+
+### SSA names and what gets renamed
+
+Names use subscript digits, like `x₁`, so they cannot clash with a variable named `x1`. A temporary assigned once keeps its name, since it already follows the rule, and a name the code never assigns stays unchanged. Arrays are treated as memory and are not renamed. The default is minimal SSA, which can place a phi nobody reads, and `{ pruned: true }` removes those.
+
+### Left out
+
+The IR language has calls but no function definitions, and no `for`, `do` or `continue`. A switch case never falls into the next one, as in the book's figure, so C's fall-through is not modelled. The DAG builder does not take arrays or calls. Nothing connects the type checker to the IR language: each has its own parser, because each lesson needs its own small language.
+
+## Optimization, code generation and TinyC
+
+### TinyC has no global variables
+
+A call can then change only its own result and array contents, so the optimizer can keep what it knows about scalars across a call. A program shares data through parameters and through arrays, which pass by reference.
+
+### TinyC's code generator keeps names in the frame
+
+Every variable and temporary has a frame slot, and each statement loads into registers and stores back. The output is slower than it could be, but it is easy to read next to the three-address code, and recursion needs no save and restore of registers. getReg and graph coloring exist as traced demos instead.
+
+### Optimizing must not add or hide a runtime error
+
+Loop-invariant code motion moves neither array reads nor division by an unknown divisor, because the moved line would run even when the loop runs zero times. Dead code elimination keeps such a division, so an error a student expects still happens. It does remove a dead array read, as C compilers may, so a bounds error on a value nobody uses goes away.
+
+### Finding a runtime error's position
+
+Optimized TAC has no source ranges, because passes merge and move lines. When a run fails, the unoptimized code runs again to find the position. That costs a second run, but only for a program that has already failed, and it keeps every pass free of position bookkeeping.
+
+### Left out
+
+The getReg demo handles straight-line statements with one jump at the end, not calls. The DAG demo handles arithmetic statements only. An array parameter has no bounds check, because its size belongs to the caller.

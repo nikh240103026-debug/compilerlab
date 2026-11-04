@@ -1,0 +1,242 @@
+[
+  {
+    "term": "Compiler",
+    "definition": "A program that translates a whole source program into an equivalent program in a target language, usually machine code, and reports the errors it finds along the way.",
+    "module": "foundations",
+    "related": ["Interpreter", "Phase", "Pass"]
+  },
+  {
+    "term": "Interpreter",
+    "definition": "A program that executes a source program directly, statement by statement, instead of producing a separate target program to run later.",
+    "module": "foundations",
+    "related": ["Compiler"]
+  },
+  {
+    "term": "Phase",
+    "definition": "One logical step of a compiler, such as lexical analysis or code generation, that takes one representation of the program and produces the next.",
+    "module": "foundations",
+    "related": ["Pass", "Compiler"]
+  },
+  {
+    "term": "Pass",
+    "definition": "One complete read through the program or its intermediate form. Several phases can share a pass, so a pass is a unit of implementation and a phase is a unit of logic.",
+    "module": "foundations",
+    "related": ["Phase"]
+  },
+  {
+    "term": "Bootstrapping",
+    "definition": "Writing a compiler in the language it compiles, starting from a small version compiled some other way, and using each version to build the next.",
+    "module": "foundations",
+    "related": ["Cross-compiler", "Compiler"]
+  },
+  {
+    "term": "Cross-compiler",
+    "definition": "A compiler that runs on one machine and produces code for a different one, such as a compiler running on a laptop that produces code for a phone.",
+    "module": "foundations",
+    "related": ["Bootstrapping"]
+  },
+  {
+    "term": "Token",
+    "definition": "A pair of a token name and an optional attribute value, which the lexer hands to the parser. The name is an abstract symbol such as id or number.",
+    "module": "lexical-analysis",
+    "related": ["Lexeme", "Pattern"]
+  },
+  {
+    "term": "Lexeme",
+    "definition": "The actual sequence of characters in the source program that matches the pattern of a token, such as the characters of the name count.",
+    "module": "lexical-analysis",
+    "related": ["Token", "Pattern", "Maximal munch"]
+  },
+  {
+    "term": "Pattern",
+    "definition": "A description of the form the lexemes of a token can take, usually written as a regular expression.",
+    "module": "lexical-analysis",
+    "related": ["Token", "Lexeme", "Regular expression"]
+  },
+  {
+    "term": "Regular expression",
+    "definition": "A notation for a regular language, built from single symbols and ε using union, concatenation and Kleene star.",
+    "module": "lexical-analysis",
+    "related": ["Finite automaton", "Pattern"]
+  },
+  {
+    "term": "Finite automaton",
+    "definition": "A recognizer with a finite set of states that reads its input one symbol at a time and says yes or no. Deterministic and nondeterministic automata recognize exactly the regular languages.",
+    "module": "lexical-analysis",
+    "related": ["DFA", "NFA", "Regular expression"]
+  },
+  {
+    "term": "DFA",
+    "definition": "A deterministic finite automaton: from each state, each input symbol leads to at most one next state, and there are no ε-moves. It runs in time proportional to the input's length.",
+    "module": "lexical-analysis",
+    "related": ["NFA", "Subset construction", "Finite automaton"]
+  },
+  {
+    "term": "NFA",
+    "definition": "A nondeterministic finite automaton: a state may have several moves on the same symbol, as well as ε-moves. It accepts a string if any path through it reaches an accepting state.",
+    "module": "lexical-analysis",
+    "related": ["DFA", "ε-closure", "Finite automaton"]
+  },
+  {
+    "term": "ε-closure",
+    "definition": "The set of NFA states reachable from a given state or set of states using only ε-moves, including the states themselves.",
+    "module": "lexical-analysis",
+    "related": ["NFA", "Subset construction"]
+  },
+  {
+    "term": "Subset construction",
+    "definition": "The algorithm that turns an NFA into an equivalent DFA, where each DFA state stands for a set of NFA states. In the worst case an NFA with n states needs about 2^n DFA states.",
+    "module": "lexical-analysis",
+    "related": ["NFA", "DFA", "ε-closure"]
+  },
+  {
+    "term": "Maximal munch",
+    "definition": "The rule that a lexer takes the longest prefix of the remaining input that matches any pattern. It is why >= is read as one token and not two.",
+    "module": "lexical-analysis",
+    "related": ["Lexeme"]
+  },
+  {
+    "term": "Context-free grammar",
+    "definition": "A set of terminals, nonterminals, a start symbol and productions, where every production has a single nonterminal as its head.",
+    "module": "syntax-analysis",
+    "related": ["Derivation", "Ambiguous grammar"]
+  },
+  {
+    "term": "Derivation",
+    "definition": "A sequence of steps that starts from the start symbol and replaces one nonterminal at a time using a production. A leftmost derivation always replaces the leftmost nonterminal.",
+    "module": "syntax-analysis",
+    "related": ["Context-free grammar", "Handle"]
+  },
+  {
+    "term": "Ambiguous grammar",
+    "definition": "A grammar with some sentence that has more than one parse tree, or equivalently more than one leftmost derivation.",
+    "module": "syntax-analysis",
+    "related": ["Context-free grammar"]
+  },
+  {
+    "term": "FIRST set",
+    "definition": "FIRST(α) is the set of terminals that can begin a string derived from α, plus ε if α can derive the empty string.",
+    "module": "syntax-analysis",
+    "related": ["FOLLOW set", "LL(1) grammar"]
+  },
+  {
+    "term": "FOLLOW set",
+    "definition": "FOLLOW(A) is the set of terminals that can appear immediately to the right of the nonterminal A in some sentential form. It contains $ if A can come last.",
+    "module": "syntax-analysis",
+    "related": ["FIRST set", "LL(1) grammar"]
+  },
+  {
+    "term": "LL(1) grammar",
+    "definition": "A grammar whose predictive parsing table has at most one production in each cell, so a top-down parser can choose with one token of lookahead. No left-recursive or ambiguous grammar is LL(1).",
+    "module": "syntax-analysis",
+    "related": ["FIRST set", "FOLLOW set"]
+  },
+  {
+    "term": "Handle",
+    "definition": "A substring of a right-sentential form that matches the body of a production, and whose reduction is one step back along a rightmost derivation.",
+    "module": "syntax-analysis",
+    "related": ["Shift-reduce parsing", "Derivation"]
+  },
+  {
+    "term": "Shift-reduce parsing",
+    "definition": "Bottom-up parsing with a stack and four actions: shift the next token, reduce a handle on top of the stack, accept, or report an error.",
+    "module": "syntax-analysis",
+    "related": ["Handle", "LR(0) item"]
+  },
+  {
+    "term": "LR(0) item",
+    "definition": "A production with a dot somewhere in its body, such as A → a · b, showing how much of that production the parser has seen so far.",
+    "module": "syntax-analysis",
+    "related": ["Shift-reduce parsing", "LALR parser"]
+  },
+  {
+    "term": "LALR parser",
+    "definition": "An LR parser whose states merge canonical LR(1) states with the same core. It has as many states as an SLR parser but more precise lookaheads, and it is what Yacc and Bison build by default.",
+    "module": "syntax-analysis",
+    "related": ["LR(0) item", "Shift-reduce parsing"]
+  },
+  {
+    "term": "Synthesized attribute",
+    "definition": "An attribute of a parse tree node computed only from the attributes of its children and from the node itself. A definition using only these is S-attributed.",
+    "module": "semantic-analysis",
+    "related": ["Inherited attribute"]
+  },
+  {
+    "term": "Inherited attribute",
+    "definition": "An attribute of a parse tree node computed from its parent, its siblings or the node itself. L-attributed definitions allow these, but only flowing from left to right.",
+    "module": "semantic-analysis",
+    "related": ["Synthesized attribute"]
+  },
+  {
+    "term": "Symbol table",
+    "definition": "The compiler's data structure holding what it knows about each name, such as its type and scope. Scopes are often kept as a chain of hash tables.",
+    "module": "semantic-analysis",
+    "related": ["Inherited attribute"]
+  },
+  {
+    "term": "Three-address code",
+    "definition": "An intermediate form in which each instruction has at most one operator on the right side, so a long expression becomes a sequence of simple steps using temporaries.",
+    "module": "intermediate-code",
+    "related": ["Quadruple", "Static single assignment"]
+  },
+  {
+    "term": "Quadruple",
+    "definition": "A record with four fields, op, arg1, arg2 and result, that represents one three-address instruction. Results are named explicitly, so instructions can be moved without renumbering.",
+    "module": "intermediate-code",
+    "related": ["Three-address code"]
+  },
+  {
+    "term": "Static single assignment",
+    "definition": "An intermediate form where each variable is assigned exactly once. Where control-flow paths merge, a φ-function chooses the value that arrived.",
+    "module": "intermediate-code",
+    "related": ["Three-address code"]
+  },
+  {
+    "term": "Backpatching",
+    "definition": "Generating jumps before their targets are known, keeping lists of the incomplete jumps, and filling in the labels once the targets are known. It lets boolean expressions be translated in one pass.",
+    "module": "intermediate-code",
+    "related": ["Three-address code"]
+  },
+  {
+    "term": "Basic block",
+    "definition": "A straight run of instructions that control can only enter at the first and leave at the last. The first instruction of each block is called a leader.",
+    "module": "code-optimization",
+    "related": ["Flow graph"]
+  },
+  {
+    "term": "Flow graph",
+    "definition": "A graph with basic blocks as its nodes and possible jumps as its edges. Optimizers and data-flow analyses work on it.",
+    "module": "code-optimization",
+    "related": ["Basic block", "Reaching definition", "Live variable"]
+  },
+  {
+    "term": "Reaching definition",
+    "definition": "A definition of a variable reaches a point if some path from the definition to that point has no other definition of the same variable.",
+    "module": "code-optimization",
+    "related": ["Live variable", "Flow graph"]
+  },
+  {
+    "term": "Live variable",
+    "definition": "A variable is live at a point if its current value may be used along some path starting at that point. This is a backward analysis, and register allocators rely on it.",
+    "module": "code-optimization",
+    "related": ["Reaching definition", "Graph coloring"]
+  },
+  {
+    "term": "Graph coloring",
+    "definition": "Register allocation by building an interference graph, where two variables are joined if they are live at the same time, and giving joined variables different registers.",
+    "module": "code-generation",
+    "related": ["Live variable"]
+  },
+  {
+    "term": "Activation record",
+    "definition": "The block of memory for one call of a procedure, holding its locals, temporaries, saved registers, parameters and return information. It is also called a stack frame.",
+    "module": "runtime-environments",
+    "related": ["Access link"]
+  },
+  {
+    "term": "Access link",
+    "definition": "A pointer in an activation record to the record of the lexically enclosing procedure, which lets a nested procedure reach the variables of its enclosing scopes.",
+    "module": "runtime-environments",
+    "related": ["Activation record"]
+  }
+]
