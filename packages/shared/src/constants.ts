@@ -21,6 +21,17 @@ export const VISUALIZER_IDS = [
   'automata-builder',
   'token-stream',
   'input-buffer',
+  'grammar-workbench',
+  'first-follow',
+  'll1-table',
+  'lr-automaton',
+  'parser-stack',
+  'parse-tree-derivation',
+  'ambiguity-explorer',
+  'operator-precedence',
+  'annotated-parse-tree',
+  'dependency-graph',
+  'scope-stack',
 ] as const;
 
 export type VisualizerId = (typeof VISUALIZER_IDS)[number];
@@ -32,4 +43,5 @@ export const DEFAULT_SETTINGS: Settings = {
   editorKeymap: 'default',
   geminiModel: '',
   toolPaths: { flex: '', bison: '', gcc: '', gpp: '', make: '' },
+  gamification: true,
 };

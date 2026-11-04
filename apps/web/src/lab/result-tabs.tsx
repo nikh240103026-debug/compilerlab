@@ -49,6 +49,7 @@ const TABS = [
   { id: 'tokens', label: 'Token stream' },
   { id: 'visual', label: 'Visual trace' },
   { id: 'tests', label: 'Tests' },
+  { id: 'ai', label: 'AI help' },
 ] as const;
 
 export type ResultTab = (typeof TABS)[number]['id'];
@@ -113,13 +114,16 @@ function StepRow({ step, showMessage }: { step: LabStepView; showMessage: boolea
 function DiagnosticRow({
   item,
   onGoToLine,
+  onExplain,
 }: {
   item: LabDiagnostic;
   onGoToLine: (file: string, line: number, column: number | null) => void;
+  onExplain: (question: string) => void;
 }) {
   const askAi = useAskAi();
   const where =
     item.file && item.line !== null ? `${item.file}, line ${item.line}` : (item.file ?? item.tool);
+  const question = `I got this ${item.tool} ${item.severity} in ${where}: "${item.message}". What does it mean, and how do I fix it?`;
   return (
     <li className="rounded-md border border-line p-2 text-sm">
       <div className="flex flex-wrap items-center gap-2">
@@ -142,16 +146,11 @@ function DiagnosticRow({
         <span className="text-xs text-ink-muted">
           {item.tool} {item.severity}
         </span>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="ml-auto"
-          onClick={() =>
-            askAi(
-              `I got this ${item.tool} ${item.severity} in ${where}: "${item.message}". What does it mean, and how do I fix it?`,
-            )
-          }
-        >
+        <Button size="sm" variant="ghost" className="ml-auto" onClick={() => onExplain(question)}>
+          <Sparkles aria-hidden="true" />
+          Explain this error
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => askAi(question)}>
           <Sparkles aria-hidden="true" />
           Ask AI
         </Button>
@@ -165,9 +164,11 @@ function DiagnosticRow({
 function BuildLog({
   run,
   onGoToLine,
+  onExplain,
 }: {
   run: LabRunState;
   onGoToLine: (file: string, line: number, column: number | null) => void;
+  onExplain: (question: string) => void;
 }) {
   const askAi = useAskAi();
   const notes = run.diagnostics.filter((item) => item.severity !== 'note');
@@ -200,7 +201,12 @@ function BuildLog({
         <section aria-label="Problems">
           <ul className="space-y-2">
             {notes.map((item, index) => (
-              <DiagnosticRow key={index} item={item} onGoToLine={onGoToLine} />
+              <DiagnosticRow
+                key={index}
+                item={item}
+                onGoToLine={onGoToLine}
+                onExplain={onExplain}
+              />
             ))}
           </ul>
         </section>
@@ -480,6 +486,8 @@ export function ResultTabs({
   terminalRef,
   fontSize,
   onGoToLine,
+  onExplain,
+  aiHelp,
 }: {
   run: LabRunState;
   tab: ResultTab;
@@ -489,6 +497,9 @@ export function ResultTabs({
   terminalRef: Ref<TerminalHandle>;
   fontSize: number;
   onGoToLine: (file: string, line: number, column: number | null) => void;
+  /** Asks the AI help tab about a build problem. */
+  onExplain: (question: string) => void;
+  aiHelp: ReactNode;
 }) {
   const baseId = useId();
   const stdinId = useId();
@@ -586,7 +597,9 @@ export function ResultTabs({
                     <TerminalPane ref={terminalRef} fontSize={fontSize} />
                   </Suspense>
                 ) : null}
-                {item.id === 'build' ? <BuildLog run={run} onGoToLine={onGoToLine} /> : null}
+                {item.id === 'build' ? (
+                  <BuildLog run={run} onGoToLine={onGoToLine} onExplain={onExplain} />
+                ) : null}
                 {item.id === 'output' ? <OutputPane run={run} /> : null}
                 {item.id === 'generated' && tab === 'generated' ? (
                   <GeneratedPane run={run} fontSize={fontSize} />
@@ -594,6 +607,8 @@ export function ResultTabs({
                 {item.id === 'tokens' ? <TokensPane run={run} /> : null}
                 {item.id === 'visual' ? <VisualPane run={run} active={tab === 'visual'} /> : null}
                 {item.id === 'tests' ? <TestsPane run={run} /> : null}
+                {/* Always mounted, so an answer keeps streaming when the student changes tabs. */}
+                {item.id === 'ai' ? aiHelp : null}
               </div>
             ))}
           </div>

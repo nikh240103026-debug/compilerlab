@@ -30,9 +30,13 @@ import {
   type TracedScanResult,
 } from '@compilerlab/engine';
 
+import { assessmentHandlers, type AssessmentJobTypes } from '../../assessment/jobs';
+import { parsingHandlers, type ParsingJobTypes } from '../parsing/jobs';
+import { semanticHandlers, type SemanticJobTypes } from '../semantic/jobs';
+
 export type Machine = 'nfa' | 'dfa' | 'minimal';
 
-export interface JobTypes {
+export interface JobTypes extends ParsingJobTypes, SemanticJobTypes, AssessmentJobTypes {
   thompson: { input: { regex: string }; output: ThompsonResult };
   subset: { input: { regex: string }; output: SubsetResult & { nfa: Nfa } };
   minimize: {
@@ -65,6 +69,9 @@ export type JobOutput<K extends JobKind> = JobTypes[K]['output'];
 const dfaOf = (regex: string): Dfa => subsetConstruct(thompson(parseRegex(regex)).nfa).dfa;
 
 const handlers: { [K in JobKind]: (input: JobInput<K>) => JobOutput<K> } = {
+  ...parsingHandlers,
+  ...semanticHandlers,
+  ...assessmentHandlers,
   thompson: ({ regex }) => thompson(parseRegex(regex), regex),
   subset: ({ regex }) => {
     const { nfa } = thompson(parseRegex(regex), regex);

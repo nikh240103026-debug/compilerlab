@@ -1,10 +1,17 @@
+import type { AiContext } from '@compilerlab/shared';
 import { CircleAlert, RotateCw, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router';
+import { currentAiContext } from '@/ai/context-store';
 import { Button } from './ui/button';
 
+/**
+ * Takes a question to the tutor. What is on the current page goes with it, because the page is
+ * about to close. `context` adds anything the caller knows that the page does not.
+ */
 export function useAskAi() {
   const navigate = useNavigate();
-  return (question: string) => navigate('/tutor', { state: { ask: question } });
+  return (question: string, context?: AiContext) =>
+    navigate('/tutor', { state: { ask: question, context: currentAiContext(context) } });
 }
 
 export function ErrorPanel({

@@ -1,5 +1,5 @@
 import { Compass } from 'lucide-react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { EmptyState } from '@/components/empty-state';
 import { Page, PageHeader } from '@/components/page';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { VisualizerHost } from '@/visualizers/visualizer-host';
 export function Component() {
   const { visualizerId } = useParams();
   const entry = findVisualizer(visualizerId);
+  // So another page can link straight to a visualizer with its inputs filled in.
+  const [params] = useSearchParams();
 
   if (!entry) {
     return (
@@ -30,7 +32,11 @@ export function Component() {
   return (
     <Page>
       <PageHeader title={entry.title} lead={entry.description} />
-      <VisualizerHost id={entry.id} />
+      <VisualizerHost
+        key={params.toString()}
+        id={entry.id}
+        {...(params.size > 0 ? { initial: Object.fromEntries(params) } : {})}
+      />
     </Page>
   );
 }

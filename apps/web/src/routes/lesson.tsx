@@ -45,6 +45,9 @@ import { cn } from '@/lib/cn';
 import { findVisualizer } from '@/visualizers/registry';
 import { VisualizerHost } from '@/visualizers/visualizer-host';
 
+// The floating Ask AI panel. It only loads with a lesson, and its Markdown renderer loads later.
+const LessonAskAi = lazy(() => import('@/ai/lesson-ask-ai'));
+
 const lessonFiles = import.meta.glob<{ default: ComponentType<{ components?: object }> }>(
   '../../../../packages/content/lessons/**/*.mdx',
 );
@@ -388,6 +391,7 @@ function LessonPage({
   const { data: bank, error: bankError, refetch } = useTopicBank(lesson.id);
   const { data: allProgress = [] } = useProgress();
   const [request, setRequest] = useState<(TryRequest & { nonce: number }) | null>(null);
+  const articleRef = useRef<HTMLElement>(null);
 
   const already = allProgress.find((item) => item.topicId === lesson.id);
   const usedOnce = useRef(already?.visualizerUsed ?? false);
@@ -423,7 +427,7 @@ function LessonPage({
             min={0.3}
             max={0.72}
             start={
-              <article className="p-6">
+              <article ref={articleRef} className="p-6">
                 <LessonHeader
                   lesson={lesson}
                   moduleNumber={moduleNumber}
@@ -471,29 +475,34 @@ function LessonPage({
             end={<VisualizerPane tabs={lesson.visualizers} request={request} onUsed={markUsed} />}
           />
         </div>
-        <nav
-          aria-label="Topic"
-          className="flex shrink-0 items-center justify-between gap-2 border-t border-line bg-surface px-4 py-2"
-        >
-          {previous ? (
-            <Button asChild size="sm" variant="ghost">
-              <Link to={`/learn/${previous.module}/${previous.id}`}>
-                <ArrowLeft aria-hidden="true" />
-                {previous.title}
-              </Link>
-            </Button>
-          ) : (
-            <span />
-          )}
-          {next ? (
-            <Button asChild size="sm" variant="ghost">
-              <Link to={`/learn/${next.module}/${next.id}`}>
-                {next.title}
-                <ArrowRight aria-hidden="true" />
-              </Link>
-            </Button>
-          ) : null}
-        </nav>
+        <div className="flex shrink-0 items-center gap-2 border-t border-line bg-surface px-4 py-2">
+          <nav
+            aria-label="Topic"
+            className="flex min-w-0 flex-1 items-center justify-between gap-2"
+          >
+            {previous ? (
+              <Button asChild size="sm" variant="ghost">
+                <Link to={`/learn/${previous.module}/${previous.id}`}>
+                  <ArrowLeft aria-hidden="true" />
+                  {previous.title}
+                </Link>
+              </Button>
+            ) : (
+              <span />
+            )}
+            {next ? (
+              <Button asChild size="sm" variant="ghost">
+                <Link to={`/learn/${next.module}/${next.id}`}>
+                  {next.title}
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </Button>
+            ) : null}
+          </nav>
+          <Suspense fallback={null}>
+            <LessonAskAi lesson={lesson} articleRef={articleRef} />
+          </Suspense>
+        </div>
       </div>
     </TryItContext.Provider>
   );

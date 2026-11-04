@@ -71,6 +71,87 @@ export const VISUALIZERS: readonly VisualizerEntry[] = [
     moduleNumber: 1,
     load: () => import('./followpos'),
   },
+  {
+    id: 'grammar-workbench',
+    title: 'Grammar workbench',
+    description:
+      'Edit a grammar and see its warnings, left recursion removed, left factoring, FIRST and FOLLOW.',
+    moduleNumber: 2,
+    load: () => import('./parsing/grammar-workbench'),
+  },
+  {
+    id: 'first-follow',
+    title: 'FIRST and FOLLOW practice',
+    description: 'Fill in the sets yourself, have them checked, then watch how they are computed.',
+    moduleNumber: 2,
+    load: () => import('./parsing/first-follow-fill'),
+  },
+  {
+    id: 'll1-table',
+    title: 'LL(1) parsing table',
+    description: 'Fill in the table one production at a time, with conflicts highlighted.',
+    moduleNumber: 2,
+    load: () => import('./parsing/ll1-table'),
+  },
+  {
+    id: 'lr-automaton',
+    title: 'LR automaton',
+    description:
+      'Build the item sets and the table for SLR, LR(1) and LALR, and find the conflicts.',
+    moduleNumber: 2,
+    load: () => import('./parsing/lr-automaton'),
+  },
+  {
+    id: 'parser-stack',
+    title: 'Parser stack animator',
+    description:
+      'Watch an LL or LR parser work through a sentence, with its stack, input tape and parse tree.',
+    moduleNumber: 2,
+    load: () => import('./parsing/parser-stack'),
+  },
+  {
+    id: 'parse-tree-derivation',
+    title: 'Parse tree and derivation',
+    description: 'See one parse tree grow beside its leftmost and rightmost derivations.',
+    moduleNumber: 2,
+    load: () => import('./parsing/parse-tree-derivation'),
+  },
+  {
+    id: 'ambiguity-explorer',
+    title: 'Ambiguity explorer',
+    description: 'Search for a sentence with two parse trees, and compare the two side by side.',
+    moduleNumber: 2,
+    load: () => import('./parsing/ambiguity-explorer'),
+  },
+  {
+    id: 'operator-precedence',
+    title: 'Operator-precedence parsing',
+    description: 'Build a table of precedence relations and parse by comparing terminals.',
+    moduleNumber: 2,
+    load: () => import('./parsing/operator-precedence'),
+  },
+  {
+    id: 'annotated-parse-tree',
+    title: 'Annotated parse tree',
+    description: 'Enter a syntax-directed definition and watch attributes fill in on the tree.',
+    moduleNumber: 3,
+    load: () => import('./semantic/annotated-parse-tree'),
+  },
+  {
+    id: 'dependency-graph',
+    title: 'Attribute dependency graph',
+    description:
+      'See the evaluation order, any cycles, and whether a definition is S- or L-attributed.',
+    moduleNumber: 3,
+    load: () => import('./semantic/dependency-graph'),
+  },
+  {
+    id: 'scope-stack',
+    title: 'Scope stack and symbol tables',
+    description: 'Follow declarations and lookups through scoped stacks, hash tables and trees.',
+    moduleNumber: 3,
+    load: () => import('./semantic/scope-stack'),
+  },
 ];
 
 export function findVisualizer(id: string | undefined): VisualizerEntry | undefined {

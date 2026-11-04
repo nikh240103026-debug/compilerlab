@@ -1,5 +1,6 @@
 import type { SimulationState, TraceStep } from '@compilerlab/engine';
 import { useCallback, useId, useMemo, useState } from 'react';
+import { useAiVisualizerInput } from '@/ai/context-store';
 import { Input } from '@/components/ui/field';
 import { Segmented } from '@/components/ui/segmented';
 import { useDebouncedValue, useEngineJob } from './engine/use-engine';
@@ -108,6 +109,7 @@ export default function AutomatonRun({ initial, onUsed }: VisualizerProps) {
   const settledRegex = useDebouncedValue(regex);
   const settledText = useDebouncedValue(text);
   const { data } = useEngineJob('run', { regex: settledRegex, text: settledText, machine });
+  useAiVisualizerInput(`Regular expression: ${settledRegex}\nInput string: ${settledText}`);
   const textId = useId();
 
   return (

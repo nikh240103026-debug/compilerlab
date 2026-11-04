@@ -1,38 +1,39 @@
-import type { Nfa, SimulationState, TraceStep } from '@compilerlab/engine';
+import type { EquivalenceResult, Nfa, SimulationState, TraceStep } from '@compilerlab/engine';
 import {
   applyEdgeChanges,
   applyNodeChanges,
   Background,
-  BaseEdge,
   ConnectionMode,
   Controls,
-  Handle,
-  Position,
   ReactFlow,
-  useInternalNode,
   type Connection,
-  type Edge,
   type EdgeChange,
-  type EdgeProps,
-  type EdgeTypes,
-  type InternalNode,
-  type Node,
   type NodeChange,
-  type NodeProps,
-  type NodeTypes,
   type OnSelectionChangeParams,
 } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
 import { Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useAiVisualizerInput } from '@/ai/context-store';
+import { FormalCheckExplain, type EngineCheck } from '@/ai/formal-checker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input, NativeSelect } from '@/components/ui/field';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useSettings } from '@/hooks/use-settings';
 import { resolveTheme } from '@/lib/apply-settings';
-import { cn } from '@/lib/cn';
 import { readJson, writeJson } from '@/lib/storage';
+import {
+  displayEdges as withEdgeDetails,
+  displayNodes as withNodeDetails,
+  EDGE_TYPES,
+  fromFlow,
+  NODE_SIZE,
+  NODE_TYPES,
+  toFlowEdges,
+  toFlowNodes,
+  type StateFlowNode,
+  type TransitionFlowEdge,
+} from './automaton-flow';
 import {
   A_OR_B,
   buildAutomaton,
@@ -42,135 +43,12 @@ import {
 } from './builder-model';
 import { useDebouncedValue, useEngineJob } from './engine/use-engine';
 import { AutomatonGraph, mergeEdges, type GraphNode } from './graph/automaton-graph';
-import { routeEdge, STATE_RADIUS, type GraphLayout, type Point } from './graph/layout';
+import { STATE_RADIUS, type GraphLayout } from './graph/layout';
 import { Player } from './player/player';
 import { InputError, JobResult, type VisualizerProps } from './shared';
 import { Tape, tapeSize } from './tape';
 
 const DRAFT_KEY = 'compilerlab.builder';
-const NODE_SIZE = STATE_RADIUS * 2;
-
-type StateData = { label: string; accepting: boolean; start: boolean; active: boolean };
-type TransitionData = { label: string; hasReverse: boolean; obstacles: readonly Point[] };
-type StateFlowNode = Node<StateData, 'state'>;
-type TransitionFlowEdge = Edge<TransitionData, 'transition'>;
-
-function StateNode({ data }: NodeProps<StateFlowNode>) {
-  const ring = data.active ? 'border-accent' : 'border-ink-muted';
-  return (
-    <div
-      className="relative"
-      style={{ width: NODE_SIZE, height: NODE_SIZE }}
-      aria-label={`State ${data.label}${data.start ? ', start' : ''}${data.accepting ? ', accepting' : ''}`}
-    >
-      {data.active ? (
-        <div className="absolute -inset-1.5 rounded-full bg-accent opacity-25" aria-hidden="true" />
-      ) : null}
-      {data.start ? (
-        <span
-          aria-hidden="true"
-          className="absolute top-1/2 -left-5 -translate-y-1/2 text-base leading-none text-ink-muted"
-        >
-          →
-        </span>
-      ) : null}
-      {/* The ring starts a new edge, and the middle drags the state. */}
-      <div className={cn('absolute inset-0 rounded-full border-2 bg-surface', ring)} />
-      <Handle
-        type="source"
-        position={Position.Top}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          transform: 'none',
-          borderRadius: '50%',
-          background: 'transparent',
-          border: 'none',
-        }}
-      />
-      <div
-        className={cn(
-          'state-drag absolute inset-[6px] flex cursor-grab items-center justify-center rounded-full font-mono text-xs font-semibold text-ink',
-          data.accepting && cn('border-2', ring),
-        )}
-      >
-        {data.label}
-      </div>
-    </div>
-  );
-}
-
-function centerOf(node: InternalNode) {
-  const { x, y } = node.internals.positionAbsolute;
-  return {
-    x: x + (node.measured.width ?? NODE_SIZE) / 2,
-    y: y + (node.measured.height ?? NODE_SIZE) / 2,
-  };
-}
-
-function TransitionEdge({ id, source, target, data, selected }: EdgeProps<TransitionFlowEdge>) {
-  const from = useInternalNode(source);
-  const to = useInternalNode(target);
-  if (!from || !to) return null;
-  const route = routeEdge(
-    centerOf(from),
-    centerOf(to),
-    data?.obstacles ?? [],
-    data?.hasReverse ?? false,
-  );
-  const color = selected ? 'var(--accent)' : 'var(--line-strong)';
-  return (
-    <>
-      <BaseEdge
-        id={id}
-        path={route.path}
-        interactionWidth={24}
-        style={{ stroke: color, strokeWidth: selected ? 2.25 : 1.5 }}
-      />
-      <polygon points={route.arrow} fill={color} />
-      <text
-        x={route.label.x}
-        y={route.label.y}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fontSize={12}
-        fontFamily="var(--font-mono)"
-        fill={selected ? 'var(--accent)' : 'var(--ink-muted)'}
-        stroke="var(--surface)"
-        strokeWidth={4}
-        paintOrder="stroke"
-        style={{ pointerEvents: 'none' }}
-      >
-        {data?.label}
-      </text>
-    </>
-  );
-}
-
-const NODE_TYPES: NodeTypes = { state: StateNode };
-const EDGE_TYPES: EdgeTypes = { transition: TransitionEdge };
-
-function toFlowNodes(automaton: BuilderAutomaton): StateFlowNode[] {
-  return automaton.states.map((state) => ({
-    id: state.id,
-    type: 'state',
-    position: { x: state.x, y: state.y },
-    dragHandle: '.state-drag',
-    data: { label: state.label, accepting: state.accepting, start: false, active: false },
-  }));
-}
-
-function toFlowEdges(automaton: BuilderAutomaton): TransitionFlowEdge[] {
-  return automaton.transitions.map((transition) => ({
-    id: transition.id,
-    type: 'transition',
-    source: transition.from,
-    target: transition.to,
-    data: { label: transition.label, hasReverse: false, obstacles: [] },
-  }));
-}
 
 function loadDraft(): BuilderAutomaton | null {
   const draft = readJson<BuilderAutomaton>(DRAFT_KEY);
@@ -304,7 +182,41 @@ function TestRun({
   );
 }
 
-function CompareWithRegex({ nfa }: { nfa: Nfa }) {
+/** The student's automaton in words, for the AI, which cannot see the canvas. */
+function describeAutomaton({ startId, states, transitions }: BuilderAutomaton): string {
+  const nameOf = (id: string | null) => states.find((state) => state.id === id)?.label ?? 'none';
+  const accepting = states.filter((state) => state.accepting).map((state) => state.label);
+  return [
+    `Start state: ${nameOf(startId)}`,
+    `Accepting states: ${accepting.join(', ') || 'none'}`,
+    'Transitions:',
+    ...transitions.map(({ from, to, label }) => `${nameOf(from)} --${label}--> ${nameOf(to)}`),
+  ].join('\n');
+}
+
+function engineCheckOf(result: EquivalenceResult): EngineCheck {
+  if (result.equivalent) {
+    return { correct: true, summary: 'The automaton accepts exactly this language.' };
+  }
+  return {
+    correct: false,
+    summary:
+      result.acceptedBy === 'first'
+        ? 'The automaton accepts a string that the regular expression does not.'
+        : 'The regular expression accepts a string that the automaton does not.',
+    counterexample: result.witness,
+  };
+}
+
+function CompareWithRegex({
+  nfa,
+  kind,
+  description,
+}: {
+  nfa: Nfa;
+  kind: 'dfa' | 'nfa';
+  description: string;
+}) {
   const [regex, setRegex] = useState('');
   const settled = useDebouncedValue(regex);
   const id = useId();
@@ -353,6 +265,18 @@ function CompareWithRegex({ nfa }: { nfa: Nfa }) {
           </div>
         )
       ) : null}
+      {settled.trim() && data?.ok ? (
+        <div className="mt-1">
+          {/* The verdict above is the engine's. The AI can only explain it, never change it. */}
+          <FormalCheckExplain
+            key={`${settled}\n${description}`}
+            kind={kind}
+            submission={description}
+            goal={`Accept exactly the language of the regular expression ${settled}`}
+            check={engineCheckOf(data.value)}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -372,54 +296,19 @@ export default function AutomataBuilder({ initial, onUsed }: VisualizerProps) {
   const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
   const labelFieldId = useId();
 
-  const automaton = useMemo<BuilderAutomaton>(
-    () => ({
-      startId,
-      states: nodes.map((node) => ({
-        id: node.id,
-        label: node.data.label,
-        accepting: node.data.accepting,
-        x: node.position.x,
-        y: node.position.y,
-      })),
-      transitions: edges.map((edge) => ({
-        id: edge.id,
-        from: edge.source,
-        to: edge.target,
-        label: edge.data?.label ?? '',
-      })),
-    }),
-    [nodes, edges, startId],
-  );
+  const automaton = useMemo(() => fromFlow(nodes, edges, startId), [nodes, edges, startId]);
 
   const settledAutomaton = useDebouncedValue(automaton, 200);
   useEffect(() => writeJson(DRAFT_KEY, settledAutomaton), [settledAutomaton]);
   const built = useMemo(() => buildAutomaton(settledAutomaton), [settledAutomaton]);
+  const description = useMemo(() => describeAutomaton(settledAutomaton), [settledAutomaton]);
+  useAiVisualizerInput(description);
 
   const displayNodes = useMemo(
-    () =>
-      nodes.map((node) => ({
-        ...node,
-        data: { ...node.data, start: node.id === startId, active: active.includes(node.id) },
-      })),
+    () => withNodeDetails(nodes, startId, active),
     [nodes, startId, active],
   );
-  const displayEdges = useMemo(() => {
-    const pairs = new Set(edges.map(({ source, target }) => `${source}>${target}`));
-    // So an edge can curve around the states between its two ends.
-    const obstacles = nodes.map(({ position }) => ({
-      x: position.x + STATE_RADIUS,
-      y: position.y + STATE_RADIUS,
-    }));
-    return edges.map((edge) => ({
-      ...edge,
-      data: {
-        obstacles,
-        label: edge.data?.label ?? '',
-        hasReverse: edge.source !== edge.target && pairs.has(`${edge.target}>${edge.source}`),
-      },
-    }));
-  }, [edges, nodes]);
+  const displayEdges = useMemo(() => withEdgeDetails(nodes, edges), [edges, nodes]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange<StateFlowNode>[]) => setNodes((all) => applyNodeChanges(changes, all)),
@@ -733,7 +622,11 @@ export default function AutomataBuilder({ initial, onUsed }: VisualizerProps) {
             onActive={setActive}
             onUsed={onUsed}
           />
-          <CompareWithRegex nfa={built.nfa} />
+          <CompareWithRegex
+            nfa={built.nfa}
+            kind={built.kind === 'DFA' ? 'dfa' : 'nfa'}
+            description={description}
+          />
         </div>
       ) : (
         <ul className="space-y-0.5 rounded-md border border-line-strong p-3 text-sm text-ink-muted">

@@ -28,8 +28,7 @@ export function Component() {
         ))}
       </ul>
       <p className="mt-6 text-sm text-ink-muted">
-        Visualizers for parsing, semantic analysis, code generation and runtime arrive with their
-        modules.
+        Visualizers for semantic analysis, code generation and runtime arrive with their modules.
       </p>
     </Page>
   );

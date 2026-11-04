@@ -9,6 +9,8 @@ const EnvSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('warn'),
   GEMINI_API_KEY: z.string().trim().default(''),
   GEMINI_MODEL: z.string().trim().default(DEFAULT_GEMINI_MODEL),
+  GEMINI_REQUESTS_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(10),
+  GEMINI_REQUESTS_PER_DAY: z.coerce.number().int().min(1).max(1_000_000).default(250),
   COMPILERLAB_DATA_DIR: z.string().default('data'),
   SQLITE_DRIVER: z.enum(['better-sqlite3', 'node:sqlite']).optional(),
 });
@@ -19,6 +21,10 @@ export interface AppConfig {
   logLevel: string;
   geminiApiKey: string;
   geminiModel: string;
+  /** Enforced by the AI queue, to stay inside the free tier. */
+  geminiRequestsPerMinute: number;
+  /** Only used for the quota hint. Gemini says itself when a day's quota has run out. */
+  geminiRequestsPerDay: number;
   rootDir: string;
   dataDir: string;
   /** Lessons and question banks. */
@@ -55,6 +61,8 @@ export function loadConfig(env: Record<string, string | undefined>, rootDir: str
     logLevel: values.LOG_LEVEL,
     geminiApiKey: values.GEMINI_API_KEY,
     geminiModel: values.GEMINI_MODEL,
+    geminiRequestsPerMinute: values.GEMINI_REQUESTS_PER_MINUTE,
+    geminiRequestsPerDay: values.GEMINI_REQUESTS_PER_DAY,
     rootDir,
     dataDir: resolve(rootDir, values.COMPILERLAB_DATA_DIR),
     contentDir: join(rootDir, 'packages', 'content'),

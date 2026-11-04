@@ -10,13 +10,27 @@ import {
   Pause,
   Play,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { Button } from '@/components/ui/button';
 import { useSettings } from '@/hooks/use-settings';
 import { describeError } from '@/lib/api';
 import { toast } from '@/stores/toasts';
 import { ExportFrame } from './export-frame';
 import { MAX_SPEED, MIN_SPEED, SPEED_STEP, usePlayer } from './use-player';
+
+// "Why did this step happen?" and "Predict the next step". A chunk of its own, so a visualizer's
+// drawing never waits for AI code.
+const StepCompanion = lazy(() => import('@/ai/step-companion'));
 
 export interface StageExport<S> {
   /** The drawing for one step. Must render pure SVG, with a fixed size for the whole trace. */
@@ -188,6 +202,10 @@ export function Player<S>({
 
   const stage = useMemo(() => (step ? renderStage(step) : null), [step, renderStage]);
 
+  const pause = useCallback(() => {
+    if (playing) togglePlay();
+  }, [playing, togglePlay]);
+
   if (!step) return null;
 
   return (
@@ -225,6 +243,18 @@ export function Player<S>({
           </motion.div>
         </AnimatePresence>
       </div>
+
+      <Suspense fallback={null}>
+        <StepCompanion
+          name={name}
+          index={index}
+          total={trace.length}
+          step={step}
+          next={trace[index + 1] ?? null}
+          onPause={pause}
+          onReveal={stepForward}
+        />
+      </Suspense>
 
       <div className="flex items-center gap-2">
         <input

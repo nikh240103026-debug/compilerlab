@@ -1,7 +1,8 @@
 import type { Theme } from '@compilerlab/shared';
-import { ChevronRight, Monitor, Moon, PanelLeft, Sun } from 'lucide-react';
+import { ChevronRight, Monitor, Moon, PanelLeft, Search, Sun } from 'lucide-react';
 import { Fragment } from 'react';
 import { Link } from 'react-router';
+import { usePalette } from '@/ai/palette-store';
 import { Button } from '@/components/ui/button';
 import { useSettings, useUpdateSettings } from '@/hooks/use-settings';
 import { useSystemStatus } from '@/hooks/use-system';
@@ -105,6 +106,24 @@ function ThemeButton() {
   );
 }
 
+function PaletteButton() {
+  const show = usePalette((state) => state.show);
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      title="Ask anything, jump to a topic, or run an action (Ctrl+K)"
+      onClick={show}
+    >
+      <Search aria-hidden="true" />
+      <span className="sr-only lg:not-sr-only">Search or ask</span>
+      <kbd className="hidden rounded-sm border border-line px-1 font-mono text-xs lg:inline">
+        Ctrl K
+      </kbd>
+    </Button>
+  );
+}
+
 export function Topbar({ canCollapse }: { canCollapse: boolean }) {
   const toggleSidebar = useUi((state) => state.toggleSidebar);
   return (
@@ -122,6 +141,7 @@ export function Topbar({ canCollapse }: { canCollapse: boolean }) {
       ) : null}
       <Breadcrumbs />
       <div className="ml-auto flex shrink-0 items-center gap-1">
+        <PaletteButton />
         <SystemIndicators />
         <ThemeButton />
       </div>

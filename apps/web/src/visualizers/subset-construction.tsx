@@ -6,6 +6,7 @@ import {
   type TraceStep,
 } from '@compilerlab/engine';
 import { useCallback, useMemo, useState } from 'react';
+import { useAiVisualizerInput } from '@/ai/context-store';
 import { useDebouncedValue, useEngineJob } from './engine/use-engine';
 import { AutomatonGraph, nfaEdges, type GraphNode } from './graph/automaton-graph';
 import { layoutGraph } from './graph/layout';
@@ -125,6 +126,7 @@ export default function SubsetConstruction({ initial, onUsed }: VisualizerProps)
   const [regex, setRegex] = useState(initial?.regex ?? '(a|b)*abb');
   const settled = useDebouncedValue(regex);
   const { data } = useEngineJob('subset', { regex: settled });
+  useAiVisualizerInput(settled);
 
   return (
     <div className="space-y-3">
